@@ -437,7 +437,7 @@ Verification Code: ${certificate.verificationCode}
         {/* Enhanced Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight">Certificate Management System</h1>
+            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Certificate Management System</h1>
             <p className="text-muted-foreground">Advanced certificate lifecycle management with analytics</p>
           </div>
           <div className="flex gap-2">
@@ -678,145 +678,261 @@ Verification Code: ${certificate.verificationCode}
         <>
           <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-40" onClick={() => setShowIssueModal(false)} />
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-            <div className="bg-background rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Issue New Certificate</h2>
-                <Button variant="ghost" size="icon" onClick={() => setShowIssueModal(false)}>
-                  <X className="h-4 w-4" />
+            <div className="bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-slate-900 dark:to-slate-800 rounded-xl w-full max-w-5xl max-h-[95vh] overflow-hidden shadow-2xl">
+              <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6 mb-6 relative">
+                <div className="flex items-center space-x-4 pr-12">
+                  <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center">
+                    <Award className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-bold">Issue New Certificate</h2>
+                    <p className="text-green-100 text-sm">Create and issue a professional certificate for intern completion</p>
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setShowIssueModal(false)} 
+                  className="absolute top-4 right-4 text-white hover:bg-white/20"
+                >
+                  <X className="h-6 w-6" />
                 </Button>
               </div>
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Personal Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Personal Information</h3>
-                  <Input
-                    placeholder="Full Name"
-                    value={newCertificate.internName}
-                    onChange={(e) => setNewCertificate({...newCertificate, internName: e.target.value})}
-                  />
-                  <Input
-                    type="email"
-                    placeholder="Email Address"
-                    value={newCertificate.internEmail}
-                    onChange={(e) => setNewCertificate({...newCertificate, internEmail: e.target.value})}
-                  />
-                  <Input
-                    placeholder="Phone Number"
-                    value={newCertificate.internPhone}
-                    onChange={(e) => setNewCertificate({...newCertificate, internPhone: e.target.value})}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Completion Score (0-100)"
-                    min="0"
-                    max="100"
-                    value={newCertificate.completionScore || ''}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value) || 0;
-                      const clampedValue = Math.min(Math.max(value, 0), 100);
-                      setNewCertificate({...newCertificate, completionScore: clampedValue});
-                    }}
-                  />
-                </div>
-
-                {/* Course Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Course Information</h3>
-                  <Input
-                    placeholder="Course Name"
-                    value={newCertificate.courseName}
-                    onChange={(e) => setNewCertificate({...newCertificate, courseName: e.target.value})}
-                  />
-                  <select 
-                    value={newCertificate.courseCategory} 
-                    onChange={(e) => setNewCertificate({...newCertificate, courseCategory: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option value="">Select Category</option>
-                    {COURSE_CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                  <select 
-                    value={newCertificate.instructor} 
-                    onChange={(e) => setNewCertificate({...newCertificate, instructor: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option value="">Select Instructor</option>
-                    {INSTRUCTORS.map(inst => (
-                      <option key={inst} value={inst}>{inst}</option>
-                    ))}
-                  </select>
-                  <select 
-                    value={newCertificate.department} 
-                    onChange={(e) => setNewCertificate({...newCertificate, department: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option value="">Select Department</option>
-                    {DEPARTMENTS.map(dept => (
-                      <option key={dept} value={dept}>{dept}</option>
-                    ))}
-                  </select>
-                  <select 
-                    value={newCertificate.priority} 
-                    onChange={(e) => setNewCertificate({...newCertificate, priority: e.target.value as any})}
-                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option value="high">High Priority</option>
-                    <option value="medium">Medium Priority</option>
-                    <option value="low">Low Priority</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* File Upload */}
-              <div className="space-y-4 mt-6">
-                <h3 className="text-lg font-semibold">Upload Certificate Document</h3>
-                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                  <input
-                    type="file"
-                    id="certificate-upload"
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setNewCertificate({...newCertificate, uploadedFile: file});
-                      }
-                    }}
-                    className="hidden"
-                  />
-                  <label htmlFor="certificate-upload" className="cursor-pointer">
-                    <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-lg font-medium mb-2">Upload Certificate Document</p>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Drag and drop or click to select files
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)
-                    </p>
-                  </label>
-                  {newCertificate.uploadedFile && (
-                    <div className="mt-4 p-3 bg-muted rounded-md">
-                      <p className="text-sm font-medium">
-                        Selected: {newCertificate.uploadedFile.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Size: {(newCertificate.uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
+              <div className="overflow-y-auto max-h-[70vh] px-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Personal Information Section */}
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-green-100 dark:border-slate-700">
+                    <div className="flex items-center space-x-2 mb-6">
+                      <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                        <Users className="w-5 h-5 text-green-600" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Intern Information</h3>
                     </div>
-                  )}
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Full Name *</label>
+                        <Input
+                          placeholder="Enter intern's full name"
+                          value={newCertificate.internName}
+                          onChange={(e) => setNewCertificate({...newCertificate, internName: e.target.value})}
+                          className="border-gray-200 dark:border-gray-600 focus:border-green-500 focus:ring-green-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email Address *</label>
+                        <Input
+                          type="email"
+                          placeholder="Enter email address"
+                          value={newCertificate.internEmail}
+                          onChange={(e) => setNewCertificate({...newCertificate, internEmail: e.target.value})}
+                          className="border-gray-200 dark:border-gray-600 focus:border-green-500 focus:ring-green-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone Number</label>
+                        <Input
+                          placeholder="Enter phone number"
+                          value={newCertificate.internPhone}
+                          onChange={(e) => setNewCertificate({...newCertificate, internPhone: e.target.value})}
+                          className="border-gray-200 dark:border-gray-600 focus:border-green-500 focus:ring-green-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Course Information Section */}
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-emerald-100 dark:border-slate-700">
+                    <div className="flex items-center space-x-2 mb-6">
+                      <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
+                        <GraduationCap className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Course Details</h3>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Course Name *</label>
+                        <Input
+                          placeholder="Enter course name"
+                          value={newCertificate.courseName}
+                          onChange={(e) => setNewCertificate({...newCertificate, courseName: e.target.value})}
+                          className="border-gray-200 dark:border-gray-600 focus:border-emerald-500 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Course Category</label>
+                        <select 
+                          value={newCertificate.courseCategory} 
+                          onChange={(e) => setNewCertificate({...newCertificate, courseCategory: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                        >
+                          <option value="">Select Category</option>
+                          {COURSE_CATEGORIES.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Instructor</label>
+                        <select 
+                          value={newCertificate.instructor} 
+                          onChange={(e) => setNewCertificate({...newCertificate, instructor: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                        >
+                          <option value="">Select Instructor</option>
+                          {INSTRUCTORS.map(inst => (
+                            <option key={inst} value={inst}>{inst}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Performance & Settings Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-blue-100 dark:border-slate-700">
+                    <div className="flex items-center space-x-2 mb-6">
+                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Performance</h3>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Completion Score *</label>
+                        <Input
+                          type="number"
+                          placeholder="Enter score (0-100)"
+                          min="0"
+                          max="100"
+                          value={newCertificate.completionScore || ''}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 0;
+                            const clampedValue = Math.min(Math.max(value, 0), 100);
+                            setNewCertificate({...newCertificate, completionScore: clampedValue});
+                          }}
+                          className="border-gray-200 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4">
+                        <div className="text-center">
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Calculated Grade</p>
+                          <p className="text-3xl font-bold text-blue-600">
+                            {newCertificate.completionScore ? calculateGrade(newCertificate.completionScore) : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-purple-100 dark:border-slate-700">
+                    <div className="flex items-center space-x-2 mb-6">
+                      <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                        <Settings className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Settings</h3>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
+                        <select 
+                          value={newCertificate.department} 
+                          onChange={(e) => setNewCertificate({...newCertificate, department: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        >
+                          <option value="">Select Department</option>
+                          {DEPARTMENTS.map(dept => (
+                            <option key={dept} value={dept}>{dept}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Priority Level</label>
+                        <select 
+                          value={newCertificate.priority} 
+                          onChange={(e) => setNewCertificate({...newCertificate, priority: e.target.value as any})}
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        >
+                          <option value="high">High Priority</option>
+                          <option value="medium">Medium Priority</option>
+                          <option value="low">Low Priority</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* File Upload Section */}
+                <div className="col-span-full mt-8">
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
+                    <div className="flex items-center space-x-2 mb-6">
+                      <div className="w-10 h-10 bg-gray-100 dark:bg-gray-900/30 rounded-lg flex items-center justify-center">
+                        <Upload className="w-5 h-5 text-gray-600" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Certificate Document</h3>
+                    </div>
+                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+                      <input
+                        type="file"
+                        id="certificate-upload"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setNewCertificate({...newCertificate, uploadedFile: file});
+                          }
+                        }}
+                        className="hidden"
+                      />
+                      <label htmlFor="certificate-upload" className="cursor-pointer">
+                        <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-lg font-medium mb-2 text-gray-700 dark:text-gray-300">Upload Certificate Document</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                          Drag and drop or click to select files
+                        </p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                          Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)
+                        </p>
+                      </label>
+                      {newCertificate.uploadedFile && (
+                        <div className="mt-4 p-3 bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-800">
+                          <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                            Selected: {newCertificate.uploadedFile.name}
+                          </p>
+                          <p className="text-xs text-green-600 dark:text-green-400">
+                            Size: {(newCertificate.uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-6">
-                <Button onClick={handleIssueCertificate} className="flex-1">
-                  <Award className="h-4 w-4 mr-2" />
-                  Issue Certificate
-                </Button>
-                <Button variant="outline" onClick={() => setShowIssueModal(false)} className="flex-1">
-                  Cancel
-                </Button>
+              
+              <div className="bg-gray-50 dark:bg-slate-800/50 -m-6 mt-6 p-6 rounded-b-lg">
+                <div className="flex justify-between w-full">
+                  <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                    <Clock className="w-4 h-4" />
+                    <span>Last updated: {new Date().toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowIssueModal(false)} 
+                      className="px-6"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleIssueCertificate} 
+                      className="px-6 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
+                    >
+                      <Award className="w-4 h-4 mr-2" />
+                      Issue Certificate
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -828,108 +944,212 @@ Verification Code: ${certificate.verificationCode}
         <>
           <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-40" onClick={() => setShowEditModal(false)} />
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-            <div className="bg-background rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Edit Certificate</h2>
-                <Button variant="ghost" size="icon" onClick={() => setShowEditModal(false)}>
-                  <X className="h-4 w-4" />
+            <div className="bg-gradient-to-br from-orange-50/50 to-amber-50/50 dark:from-slate-900 dark:to-slate-800 rounded-xl w-full max-w-6xl max-h-[95vh] overflow-hidden shadow-2xl">
+              <div className="bg-gradient-to-r from-orange-600 to-amber-600 text-white p-6 mb-6 relative">
+                <div className="flex items-center space-x-4 pr-12">
+                  <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                    <Edit className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-bold">Edit Certificate</h2>
+                    <p className="text-orange-100 text-sm">Modify certificate details for {editingCertificate.internName}</p>
+                    <div className="flex items-center space-x-2 mt-2">
+                      <Badge className="bg-white/20 text-white border-white/30">
+                        {editingCertificate.certificateId}
+                      </Badge>
+                      <Badge className={`${getStatusColor(editingCertificate.status)} text-xs`}>
+                        {editingCertificate.status}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setShowEditModal(false)} 
+                  className="absolute top-4 right-4 text-white hover:bg-white/20"
+                >
+                  <X className="h-6 w-6" />
                 </Button>
               </div>
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Personal Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Personal Information</h3>
-                  <Input
-                    placeholder="Full Name"
-                    value={editingCertificate.internName}
-                    onChange={(e) => setEditingCertificate({...editingCertificate, internName: e.target.value})}
-                  />
-                  <Input
-                    type="email"
-                    placeholder="Email Address"
-                    value={editingCertificate.internEmail}
-                    onChange={(e) => setEditingCertificate({...editingCertificate, internEmail: e.target.value})}
-                  />
-                  <Input
-                    placeholder="Phone Number"
-                    value={editingCertificate.internPhone}
-                    onChange={(e) => setEditingCertificate({...editingCertificate, internPhone: e.target.value})}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Completion Score (0-100)"
-                    min="0"
-                    max="100"
-                    value={editingCertificate.completionScore}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value) || 0;
-                      const clampedValue = Math.min(Math.max(value, 0), 100);
-                      setEditingCertificate({...editingCertificate, completionScore: clampedValue});
-                    }}
-                  />
-                </div>
+              <div className="overflow-y-auto max-h-[70vh] px-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Personal Information */}
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-orange-100 dark:border-slate-700">
+                    <div className="flex items-center space-x-2 mb-6">
+                      <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                        <Users className="w-5 h-5 text-orange-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Personal Info</h3>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Full Name *</label>
+                        <Input
+                          placeholder="Full Name"
+                          value={editingCertificate.internName}
+                          onChange={(e) => setEditingCertificate({...editingCertificate, internName: e.target.value})}
+                          className="border-gray-200 dark:border-gray-600 focus:border-orange-500 focus:ring-orange-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email Address *</label>
+                        <Input
+                          type="email"
+                          placeholder="Email Address"
+                          value={editingCertificate.internEmail}
+                          onChange={(e) => setEditingCertificate({...editingCertificate, internEmail: e.target.value})}
+                          className="border-gray-200 dark:border-gray-600 focus:border-orange-500 focus:ring-orange-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone Number</label>
+                        <Input
+                          placeholder="Phone Number"
+                          value={editingCertificate.internPhone}
+                          onChange={(e) => setEditingCertificate({...editingCertificate, internPhone: e.target.value})}
+                          className="border-gray-200 dark:border-gray-600 focus:border-orange-500 focus:ring-orange-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                {/* Course Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Course Information</h3>
-                  <Input
-                    placeholder="Course Name"
-                    value={editingCertificate.courseName}
-                    onChange={(e) => setEditingCertificate({...editingCertificate, courseName: e.target.value})}
-                  />
-                  <select 
-                    value={editingCertificate.courseCategory} 
-                    onChange={(e) => setEditingCertificate({...editingCertificate, courseCategory: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option value="">Select Category</option>
-                    {COURSE_CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                  <select 
-                    value={editingCertificate.instructor} 
-                    onChange={(e) => setEditingCertificate({...editingCertificate, instructor: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option value="">Select Instructor</option>
-                    {INSTRUCTORS.map(inst => (
-                      <option key={inst} value={inst}>{inst}</option>
-                    ))}
-                  </select>
-                  <select 
-                    value={editingCertificate.department} 
-                    onChange={(e) => setEditingCertificate({...editingCertificate, department: e.target.value})}
-                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option value="">Select Department</option>
-                    {DEPARTMENTS.map(dept => (
-                      <option key={dept} value={dept}>{dept}</option>
-                    ))}
-                  </select>
-                  <select 
-                    value={editingCertificate.priority} 
-                    onChange={(e) => setEditingCertificate({...editingCertificate, priority: e.target.value as any})}
-                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option value="high">High Priority</option>
-                    <option value="medium">Medium Priority</option>
-                    <option value="low">Low Priority</option>
-                  </select>
+                  {/* Course Information */}
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-amber-100 dark:border-slate-700">
+                    <div className="flex items-center space-x-2 mb-6">
+                      <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center">
+                        <GraduationCap className="w-5 h-5 text-amber-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Course Details</h3>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Course Name *</label>
+                        <Input
+                          placeholder="Course Name"
+                          value={editingCertificate.courseName}
+                          onChange={(e) => setEditingCertificate({...editingCertificate, courseName: e.target.value})}
+                          className="border-gray-200 dark:border-gray-600 focus:border-amber-500 focus:ring-amber-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
+                        <select 
+                          value={editingCertificate.courseCategory} 
+                          onChange={(e) => setEditingCertificate({...editingCertificate, courseCategory: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                        >
+                          <option value="">Select Category</option>
+                          {COURSE_CATEGORIES.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Instructor</label>
+                        <select 
+                          value={editingCertificate.instructor} 
+                          onChange={(e) => setEditingCertificate({...editingCertificate, instructor: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                        >
+                          <option value="">Select Instructor</option>
+                          {INSTRUCTORS.map(inst => (
+                            <option key={inst} value={inst}>{inst}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
+                        <select 
+                          value={editingCertificate.department} 
+                          onChange={(e) => setEditingCertificate({...editingCertificate, department: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                        >
+                          <option value="">Select Department</option>
+                          {DEPARTMENTS.map(dept => (
+                            <option key={dept} value={dept}>{dept}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Performance & Settings */}
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-red-100 dark:border-slate-700">
+                    <div className="flex items-center space-x-2 mb-6">
+                      <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-red-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Performance</h3>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Completion Score *</label>
+                        <Input
+                          type="number"
+                          placeholder="Score (0-100)"
+                          min="0"
+                          max="100"
+                          value={editingCertificate.completionScore}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 0;
+                            const clampedValue = Math.min(Math.max(value, 0), 100);
+                            setEditingCertificate({...editingCertificate, completionScore: clampedValue});
+                          }}
+                          className="border-gray-200 dark:border-gray-600 focus:border-red-500 focus:ring-red-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Priority Level</label>
+                        <select 
+                          value={editingCertificate.priority} 
+                          onChange={(e) => setEditingCertificate({...editingCertificate, priority: e.target.value as any})}
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        >
+                          <option value="high">High Priority</option>
+                          <option value="medium">Medium Priority</option>
+                          <option value="low">Low Priority</option>
+                        </select>
+                      </div>
+                      <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-4">
+                        <div className="text-center">
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Current Grade</p>
+                          <p className="text-3xl font-bold text-red-600">
+                            {calculateGrade(editingCertificate.completionScore)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                          <p><strong>Certificate ID:</strong> {editingCertificate.certificateId}</p>
+                          <p><strong>Verification:</strong> {editingCertificate.verificationCode}</p>
+                          <p><strong>Issue Date:</strong> {new Date(editingCertificate.issueDate).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
 
 
-              <div className="flex gap-3 pt-6">
-                <Button onClick={handleUpdateClick} className="flex-1">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Update Certificate
-                </Button>
-                <Button variant="outline" onClick={() => setShowEditModal(false)} className="flex-1">
-                  Cancel
-                </Button>
+              <div className="bg-gray-50 dark:bg-slate-800/50 -m-6 mt-6 p-6 rounded-b-lg">
+                <div className="flex justify-between w-full">
+                  <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                    <Clock className="w-4 h-4" />
+                    <span>Last updated: {new Date().toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <Button variant="outline" onClick={() => setShowEditModal(false)} className="px-6">
+                      Cancel
+                    </Button>
+                    <Button onClick={handleUpdateClick} className="px-6 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700">
+                      <Edit className="w-4 h-4 mr-2" />
+                      Update Certificate
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

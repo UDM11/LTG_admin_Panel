@@ -147,6 +147,7 @@ export default function Interns() {
   const [emailData, setEmailData] = useState({ subject: '', message: '' });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [updateConfirmDialogOpen, setUpdateConfirmDialogOpen] = useState(false);
   const [internToDelete, setInternToDelete] = useState<Intern | null>(null);
   const { toast } = useToast();
 
@@ -223,13 +224,19 @@ export default function Interns() {
       toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" });
       return;
     }
+    setUpdateConfirmDialogOpen(true);
+  };
+
+  const confirmUpdateIntern = () => {
+    if (!editingIntern) return;
     
     const updatedIntern = { ...editingIntern, ...formData };
     setInterns(interns.map(i => i.id === editingIntern.id ? updatedIntern : i));
     setEditingIntern(null);
     setFormData({});
     setIsEditDialogOpen(false);
-    toast({ title: "Success", description: "Intern updated successfully" });
+    setUpdateConfirmDialogOpen(false);
+    toast({ title: "Success", description: "Intern profile updated successfully" });
   };
 
   const handleDeleteIntern = (intern: Intern) => {
@@ -412,117 +419,183 @@ Report generated on: ${new Date().toLocaleString()}
                 Add Intern
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Add New Intern</DialogTitle>
+            <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-slate-900 dark:to-slate-800">
+              <DialogHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 -m-6 mb-6 rounded-t-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                    <UserPlus className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-2xl font-bold">Add New Intern</DialogTitle>
+                    <p className="text-blue-100 text-sm">Create a new intern profile with comprehensive details</p>
+                  </div>
+                </div>
               </DialogHeader>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name || ''}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    placeholder="Enter full name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email || ''}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    placeholder="Enter email address"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone || ''}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    placeholder="Enter phone number"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="position">Position *</Label>
-                  <Input
-                    id="position"
-                    value={formData.position || ''}
-                    onChange={(e) => setFormData({...formData, position: e.target.value})}
-                    placeholder="Enter position"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="department">Department</Label>
-                  <Select value={formData.department || ''} onValueChange={(value) => setFormData({...formData, department: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Engineering">Engineering</SelectItem>
-                      <SelectItem value="Design">Design</SelectItem>
-                      <SelectItem value="Analytics">Analytics</SelectItem>
-                      <SelectItem value="Marketing">Marketing</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={formData.status || ''} onValueChange={(value) => setFormData({...formData, status: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="paused">Paused</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={formData.startDate || ''}
-                    onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date</Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={formData.endDate || ''}
-                    onChange={(e) => setFormData({...formData, endDate: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    value={formData.location || ''}
-                    onChange={(e) => setFormData({...formData, location: e.target.value})}
-                    placeholder="Enter location"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="supervisor">Supervisor</Label>
-                  <Input
-                    id="supervisor"
-                    value={formData.supervisor || ''}
-                    onChange={(e) => setFormData({...formData, supervisor: e.target.value})}
-                    placeholder="Enter supervisor name"
-                  />
+              
+              <div className="overflow-y-auto max-h-[70vh] px-1">
+                <div className="space-y-8">
+                  {/* Personal Information Section */}
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-blue-100 dark:border-slate-700">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                        <Users className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Personal Information</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="name" className="text-sm font-medium text-gray-700 dark:text-gray-300">Full Name *</Label>
+                        <Input
+                          id="name"
+                          value={formData.name || ''}
+                          onChange={(e) => setFormData({...formData, name: e.target.value})}
+                          placeholder="Enter full name"
+                          className="border-gray-200 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">Email Address *</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={formData.email || ''}
+                          onChange={(e) => setFormData({...formData, email: e.target.value})}
+                          placeholder="Enter email address"
+                          className="border-gray-200 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone" className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone Number</Label>
+                        <Input
+                          id="phone"
+                          value={formData.phone || ''}
+                          onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                          placeholder="Enter phone number"
+                          className="border-gray-200 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="location" className="text-sm font-medium text-gray-700 dark:text-gray-300">Location</Label>
+                        <Input
+                          id="location"
+                          value={formData.location || ''}
+                          onChange={(e) => setFormData({...formData, location: e.target.value})}
+                          placeholder="Enter location"
+                          className="border-gray-200 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Professional Information Section */}
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-indigo-100 dark:border-slate-700">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
+                        <Settings className="w-4 h-4 text-indigo-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Professional Details</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="position" className="text-sm font-medium text-gray-700 dark:text-gray-300">Position *</Label>
+                        <Input
+                          id="position"
+                          value={formData.position || ''}
+                          onChange={(e) => setFormData({...formData, position: e.target.value})}
+                          placeholder="Enter position"
+                          className="border-gray-200 dark:border-gray-600 focus:border-indigo-500 focus:ring-indigo-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="department" className="text-sm font-medium text-gray-700 dark:text-gray-300">Department</Label>
+                        <Select value={formData.department || ''} onValueChange={(value) => setFormData({...formData, department: value})}>
+                          <SelectTrigger className="border-gray-200 dark:border-gray-600 focus:border-indigo-500 focus:ring-indigo-500">
+                            <SelectValue placeholder="Select department" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Engineering">Engineering</SelectItem>
+                            <SelectItem value="Design">Design</SelectItem>
+                            <SelectItem value="Analytics">Analytics</SelectItem>
+                            <SelectItem value="Marketing">Marketing</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="supervisor" className="text-sm font-medium text-gray-700 dark:text-gray-300">Supervisor</Label>
+                        <Input
+                          id="supervisor"
+                          value={formData.supervisor || ''}
+                          onChange={(e) => setFormData({...formData, supervisor: e.target.value})}
+                          placeholder="Enter supervisor name"
+                          className="border-gray-200 dark:border-gray-600 focus:border-indigo-500 focus:ring-indigo-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="status" className="text-sm font-medium text-gray-700 dark:text-gray-300">Initial Status</Label>
+                        <Select value={formData.status || 'pending'} onValueChange={(value) => setFormData({...formData, status: value})}>
+                          <SelectTrigger className="border-gray-200 dark:border-gray-600 focus:border-indigo-500 focus:ring-indigo-500">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="paused">Paused</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Timeline Section */}
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-green-100 dark:border-slate-700">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                        <Calendar className="w-4 h-4 text-green-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Internship Timeline</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="startDate" className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Date</Label>
+                        <Input
+                          id="startDate"
+                          type="date"
+                          value={formData.startDate || ''}
+                          onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                          className="border-gray-200 dark:border-gray-600 focus:border-green-500 focus:ring-green-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="endDate" className="text-sm font-medium text-gray-700 dark:text-gray-300">End Date</Label>
+                        <Input
+                          id="endDate"
+                          type="date"
+                          value={formData.endDate || ''}
+                          onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                          className="border-gray-200 dark:border-gray-600 focus:border-green-500 focus:ring-green-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleAddIntern}>Add Intern</Button>
-              </DialogFooter>
+              
+              <div className="bg-gray-50 dark:bg-slate-800/50 p-6 mt-6 -mx-6 -mb-6 rounded-b-lg">
+                <div className="flex justify-between items-center w-full">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    * Required fields
+                  </div>
+                  <div className="flex space-x-3">
+                    <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="px-6">
+                      Cancel
+                    </Button>
+                    <Button onClick={handleAddIntern} className="px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Create Intern
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </DialogContent>
           </Dialog>
           
@@ -1179,143 +1252,277 @@ Report generated on: ${new Date().toLocaleString()}
         </AlertDialogContent>
       </AlertDialog>
       
+      {/* Update Confirmation Dialog */}
+      <AlertDialog open={updateConfirmDialogOpen} onOpenChange={setUpdateConfirmDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0 w-10 h-10 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center">
+                <Edit className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <AlertDialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Update Profile
+                </AlertDialogTitle>
+              </div>
+            </div>
+          </AlertDialogHeader>
+          
+          <AlertDialogDescription className="text-gray-600 dark:text-gray-400 mt-4">
+            Are you sure you want to update <span className="font-semibold text-gray-900 dark:text-gray-100">{editingIntern?.name}'s</span> profile? 
+            This will save all the changes you have made to their information.
+          </AlertDialogDescription>
+          
+          <AlertDialogFooter className="mt-6 space-x-2">
+            <AlertDialogCancel 
+              onClick={() => setUpdateConfirmDialogOpen(false)}
+              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmUpdateIntern}
+              className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white border-0 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Update Profile
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Intern - {editingIntern?.name}</DialogTitle>
+        <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden bg-gradient-to-br from-orange-50/50 to-red-50/50 dark:from-slate-900 dark:to-slate-800">
+          <DialogHeader className="bg-gradient-to-r from-orange-600 to-red-600 text-white p-6 -m-6 mb-6 rounded-t-lg">
+            <div className="flex items-center space-x-4">
+              <Avatar className="w-16 h-16 border-4 border-white/30">
+                <AvatarImage src={editingIntern?.avatar} />
+                <AvatarFallback className="bg-white/20 text-white text-xl font-bold">
+                  {editingIntern?.name.split(' ').map(n => n[0]).join('')}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <DialogTitle className="text-2xl font-bold">Edit Intern Profile</DialogTitle>
+                <p className="text-orange-100 text-sm">Update {editingIntern?.name}'s information and progress</p>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Full Name *</Label>
-              <Input
-                id="edit-name"
-                value={formData.name || ''}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                placeholder="Enter full name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-email">Email *</Label>
-              <Input
-                id="edit-email"
-                type="email"
-                value={formData.email || ''}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                placeholder="Enter email address"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-phone">Phone</Label>
-              <Input
-                id="edit-phone"
-                value={formData.phone || ''}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                placeholder="Enter phone number"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-position">Position *</Label>
-              <Input
-                id="edit-position"
-                value={formData.position || ''}
-                onChange={(e) => setFormData({...formData, position: e.target.value})}
-                placeholder="Enter position"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-department">Department</Label>
-              <Select value={formData.department || ''} onValueChange={(value) => setFormData({...formData, department: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Engineering">Engineering</SelectItem>
-                  <SelectItem value="Design">Design</SelectItem>
-                  <SelectItem value="Analytics">Analytics</SelectItem>
-                  <SelectItem value="Marketing">Marketing</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-status">Status</Label>
-              <Select value={formData.status || ''} onValueChange={(value) => setFormData({...formData, status: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="paused">Paused</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-progress">Progress (%)</Label>
-              <Input
-                id="edit-progress"
-                type="number"
-                min="0"
-                max="100"
-                value={formData.progress || 0}
-                onChange={(e) => setFormData({...formData, progress: parseInt(e.target.value) || 0})}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-rating">Rating (1-5)</Label>
-              <Input
-                id="edit-rating"
-                type="number"
-                min="1"
-                max="5"
-                step="0.1"
-                value={formData.rating || 0}
-                onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value) || 0})}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-location">Location</Label>
-              <Input
-                id="edit-location"
-                value={formData.location || ''}
-                onChange={(e) => setFormData({...formData, location: e.target.value})}
-                placeholder="Enter location"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-supervisor">Supervisor</Label>
-              <Input
-                id="edit-supervisor"
-                value={formData.supervisor || ''}
-                onChange={(e) => setFormData({...formData, supervisor: e.target.value})}
-                placeholder="Enter supervisor name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-tasks-completed">Tasks Completed</Label>
-              <Input
-                id="edit-tasks-completed"
-                type="number"
-                min="0"
-                value={formData.tasksCompleted || 0}
-                onChange={(e) => setFormData({...formData, tasksCompleted: parseInt(e.target.value) || 0})}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-total-tasks">Total Tasks</Label>
-              <Input
-                id="edit-total-tasks"
-                type="number"
-                min="1"
-                value={formData.totalTasks || 0}
-                onChange={(e) => setFormData({...formData, totalTasks: parseInt(e.target.value) || 0})}
-              />
+          
+          <div className="overflow-y-auto max-h-[70vh] px-1">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Personal Information */}
+              <div className="lg:col-span-1 space-y-6">
+                <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-orange-100 dark:border-slate-700">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <div className="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                      <Users className="w-4 h-4 text-orange-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Personal Info</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name" className="text-sm font-medium text-gray-700 dark:text-gray-300">Full Name *</Label>
+                      <Input
+                        id="edit-name"
+                        value={formData.name || ''}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        placeholder="Enter full name"
+                        className="border-gray-200 dark:border-gray-600 focus:border-orange-500 focus:ring-orange-500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-email" className="text-sm font-medium text-gray-700 dark:text-gray-300">Email *</Label>
+                      <Input
+                        id="edit-email"
+                        type="email"
+                        value={formData.email || ''}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        placeholder="Enter email address"
+                        className="border-gray-200 dark:border-gray-600 focus:border-orange-500 focus:ring-orange-500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-phone" className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone</Label>
+                      <Input
+                        id="edit-phone"
+                        value={formData.phone || ''}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        placeholder="Enter phone number"
+                        className="border-gray-200 dark:border-gray-600 focus:border-orange-500 focus:ring-orange-500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-location" className="text-sm font-medium text-gray-700 dark:text-gray-300">Location</Label>
+                      <Input
+                        id="edit-location"
+                        value={formData.location || ''}
+                        onChange={(e) => setFormData({...formData, location: e.target.value})}
+                        placeholder="Enter location"
+                        className="border-gray-200 dark:border-gray-600 focus:border-orange-500 focus:ring-orange-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Professional Information */}
+              <div className="lg:col-span-1 space-y-6">
+                <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-red-100 dark:border-slate-700">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                      <Settings className="w-4 h-4 text-red-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Professional</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-position" className="text-sm font-medium text-gray-700 dark:text-gray-300">Position *</Label>
+                      <Input
+                        id="edit-position"
+                        value={formData.position || ''}
+                        onChange={(e) => setFormData({...formData, position: e.target.value})}
+                        placeholder="Enter position"
+                        className="border-gray-200 dark:border-gray-600 focus:border-red-500 focus:ring-red-500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-department" className="text-sm font-medium text-gray-700 dark:text-gray-300">Department</Label>
+                      <Select value={formData.department || ''} onValueChange={(value) => setFormData({...formData, department: value})}>
+                        <SelectTrigger className="border-gray-200 dark:border-gray-600 focus:border-red-500 focus:ring-red-500">
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Engineering">Engineering</SelectItem>
+                          <SelectItem value="Design">Design</SelectItem>
+                          <SelectItem value="Analytics">Analytics</SelectItem>
+                          <SelectItem value="Marketing">Marketing</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-supervisor" className="text-sm font-medium text-gray-700 dark:text-gray-300">Supervisor</Label>
+                      <Input
+                        id="edit-supervisor"
+                        value={formData.supervisor || ''}
+                        onChange={(e) => setFormData({...formData, supervisor: e.target.value})}
+                        placeholder="Enter supervisor name"
+                        className="border-gray-200 dark:border-gray-600 focus:border-red-500 focus:ring-red-500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-status" className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</Label>
+                      <Select value={formData.status || ''} onValueChange={(value) => setFormData({...formData, status: value})}>
+                        <SelectTrigger className="border-gray-200 dark:border-gray-600 focus:border-red-500 focus:ring-red-500">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="paused">Paused</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Performance & Progress */}
+              <div className="lg:col-span-1 space-y-6">
+                <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-purple-100 dark:border-slate-700">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                      <TrendingUp className="w-4 h-4 text-purple-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Performance</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-progress" className="text-sm font-medium text-gray-700 dark:text-gray-300">Progress (%)</Label>
+                      <div className="relative">
+                        <Input
+                          id="edit-progress"
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={formData.progress || 0}
+                          onChange={(e) => setFormData({...formData, progress: parseInt(e.target.value) || 0})}
+                          className="border-gray-200 dark:border-gray-600 focus:border-purple-500 focus:ring-purple-500"
+                        />
+                        <div className="mt-2">
+                          <Progress value={formData.progress || 0} className="h-2" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-rating" className="text-sm font-medium text-gray-700 dark:text-gray-300">Rating (1-5)</Label>
+                      <Input
+                        id="edit-rating"
+                        type="number"
+                        min="1"
+                        max="5"
+                        step="0.1"
+                        value={formData.rating || 0}
+                        onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value) || 0})}
+                        className="border-gray-200 dark:border-gray-600 focus:border-purple-500 focus:ring-purple-500"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-tasks-completed" className="text-xs font-medium text-gray-700 dark:text-gray-300">Completed</Label>
+                        <Input
+                          id="edit-tasks-completed"
+                          type="number"
+                          min="0"
+                          value={formData.tasksCompleted || 0}
+                          onChange={(e) => setFormData({...formData, tasksCompleted: parseInt(e.target.value) || 0})}
+                          className="border-gray-200 dark:border-gray-600 focus:border-purple-500 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-total-tasks" className="text-xs font-medium text-gray-700 dark:text-gray-300">Total Tasks</Label>
+                        <Input
+                          id="edit-total-tasks"
+                          type="number"
+                          min="1"
+                          value={formData.totalTasks || 0}
+                          onChange={(e) => setFormData({...formData, totalTasks: parseInt(e.target.value) || 0})}
+                          className="border-gray-200 dark:border-gray-600 focus:border-purple-500 focus:ring-purple-500"
+                        />
+                      </div>
+                    </div>
+                    <div className="bg-purple-50 dark:bg-purple-950/20 rounded-lg p-3">
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Completion Rate</p>
+                        <p className="text-2xl font-bold text-purple-600">
+                          {formData.totalTasks && formData.tasksCompleted ? 
+                            Math.round((formData.tasksCompleted / formData.totalTasks) * 100) : 0}%
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleEditIntern}>Update Intern</Button>
+          
+          <DialogFooter className="bg-gray-50 dark:bg-slate-800/50 -m-6 mt-6 p-6 rounded-b-lg">
+            <div className="flex justify-between w-full">
+              <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                <Clock className="w-4 h-4" />
+                <span>Last updated: {new Date().toLocaleDateString()}</span>
+              </div>
+              <div className="space-x-3">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="px-6">
+                  Cancel
+                </Button>
+                <Button onClick={handleEditIntern} className="px-6 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700">
+                  <Edit className="w-4 h-4 mr-2" />
+                  Update Profile
+                </Button>
+              </div>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
