@@ -161,7 +161,7 @@ export default function Interns() {
       
       return matchesSearch && matchesStatus && matchesDepartment;
     });
-  }, [searchTerm, statusFilter, departmentFilter]);
+  }, [interns, searchTerm, statusFilter, departmentFilter]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -215,7 +215,7 @@ export default function Interns() {
     
     setInterns([...interns, newIntern]);
     setFormData({});
-    setIsAddDialogOpen(false);
+    closeAddDialog();
     toast({ title: "Success", description: "Intern added successfully" });
   };
 
@@ -232,9 +232,7 @@ export default function Interns() {
     
     const updatedIntern = { ...editingIntern, ...formData };
     setInterns(interns.map(i => i.id === editingIntern.id ? updatedIntern : i));
-    setEditingIntern(null);
-    setFormData({});
-    setIsEditDialogOpen(false);
+    closeEditDialog();
     setUpdateConfirmDialogOpen(false);
     toast({ title: "Success", description: "Intern profile updated successfully" });
   };
@@ -295,10 +293,27 @@ export default function Interns() {
     }
   };
 
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    setDepartmentFilter('all');
+  };
+
   const openEditDialog = (intern: Intern) => {
     setEditingIntern(intern);
     setFormData(intern);
     setIsEditDialogOpen(true);
+  };
+
+  const closeEditDialog = () => {
+    setIsEditDialogOpen(false);
+    setEditingIntern(null);
+    setFormData({});
+  };
+
+  const closeAddDialog = () => {
+    setIsAddDialogOpen(false);
+    setFormData({});
   };
 
   const openViewDialog = (intern: Intern) => {
@@ -412,7 +427,7 @@ Report generated on: ${new Date().toLocaleString()}
           <p className="text-muted-foreground mt-1">Manage and track intern progress across all departments</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <Dialog open={isAddDialogOpen} onOpenChange={(open) => open ? setIsAddDialogOpen(true) : closeAddDialog()}>
             <DialogTrigger asChild>
               <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
                 <Plus className="w-4 h-4 mr-2" />
@@ -580,36 +595,25 @@ Report generated on: ${new Date().toLocaleString()}
                 </div>
               </div>
               
-              <div className="bg-gray-50 dark:bg-slate-800/50 p-6 mt-6 -mx-6 -mb-6 rounded-b-lg">
-                <div className="flex justify-between items-center w-full">
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    * Required fields
-                  </div>
-                  <div className="flex space-x-3">
-                    <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="px-6">
-                      Cancel
-                    </Button>
-                    <Button onClick={handleAddIntern} className="px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      Create Intern
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              <DialogFooter className="flex justify-center gap-3 pt-1">
+                <Button variant="outline" onClick={closeAddDialog}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAddIntern} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Create Intern
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
+
           
           <Button variant="outline" onClick={exportData}>
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
           
-          {selectedInterns.length > 0 && (
-            <Button variant="destructive" onClick={handleBulkDelete}>
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete ({selectedInterns.length})
-            </Button>
-          )}
+
         </div>
       </div>
 
@@ -680,32 +684,23 @@ Report generated on: ${new Date().toLocaleString()}
               </div>
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Checkbox
-                checked={selectedInterns.length === filteredInterns.length && filteredInterns.length > 0}
-                onCheckedChange={handleSelectAll}
-                className="mr-2"
-              />
-              <span className="text-sm text-muted-foreground mr-4">
-                {selectedInterns.length > 0 && `${selectedInterns.length} selected`}
-              </span>
-              
+            <div className="flex gap-3">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-[140px]">
-                  <SelectValue placeholder="Status" />
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="paused">Paused</SelectItem>
                 </SelectContent>
               </Select>
               
               <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                <SelectTrigger className="w-full sm:w-[140px]">
-                  <SelectValue placeholder="Department" />
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Filter by department" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Departments</SelectItem>
@@ -715,6 +710,11 @@ Report generated on: ${new Date().toLocaleString()}
                   <SelectItem value="Marketing">Marketing</SelectItem>
                 </SelectContent>
               </Select>
+              
+              <Button variant="outline" onClick={clearFilters}>
+                <X className="w-4 h-4 mr-2" />
+                Clear
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -723,21 +723,10 @@ Report generated on: ${new Date().toLocaleString()}
       {/* Interns Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredInterns.map((intern) => (
-          <Card key={intern.id} className={`${selectedInterns.includes(intern.id) ? 'ring-2 ring-blue-500' : ''}`}>
+          <Card key={intern.id}>
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
-                  <Checkbox
-                    checked={selectedInterns.includes(intern.id)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedInterns([...selectedInterns, intern.id]);
-                      } else {
-                        setSelectedInterns(selectedInterns.filter(id => id !== intern.id));
-                      }
-                    }}
-                    className="mr-2"
-                  />
                   <Avatar className="w-12 h-12">
                     <AvatarImage src={intern.avatar} />
                     <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
@@ -1292,7 +1281,7 @@ Report generated on: ${new Date().toLocaleString()}
       </AlertDialog>
       
       {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => open ? setIsEditDialogOpen(true) : closeEditDialog()}>
         <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden bg-gradient-to-br from-orange-50/50 to-red-50/50 dark:from-slate-900 dark:to-slate-800">
           <DialogHeader className="bg-gradient-to-r from-orange-600 to-red-600 text-white p-6 -m-6 mb-6 rounded-t-lg">
             <div className="flex items-center space-x-4">
@@ -1514,7 +1503,7 @@ Report generated on: ${new Date().toLocaleString()}
                 <span>Last updated: {new Date().toLocaleDateString()}</span>
               </div>
               <div className="space-x-3">
-                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="px-6">
+                <Button variant="outline" onClick={closeEditDialog} className="px-6">
                   Cancel
                 </Button>
                 <Button onClick={handleEditIntern} className="px-6 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700">

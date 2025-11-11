@@ -549,7 +549,7 @@ Verification Code: ${certificate.verificationCode}
         </Card>
 
         {/* Enhanced Certificates Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredAndSortedCertificates.map((certificate) => (
             <Card key={certificate.id} className="p-4 sm:p-6 hover:shadow-xl transition-all group">
               <div className="space-y-4">
@@ -910,28 +910,22 @@ Verification Code: ${certificate.verificationCode}
               </div>
 
               
-              <div className="bg-gray-50 dark:bg-slate-800/50 -m-6 mt-6 p-6 rounded-b-lg">
-                <div className="flex justify-between w-full">
-                  <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-                    <Clock className="w-4 h-4" />
-                    <span>Last updated: {new Date().toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setShowIssueModal(false)} 
-                      className="px-6"
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      onClick={handleIssueCertificate} 
-                      className="px-6 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
-                    >
-                      <Award className="w-4 h-4 mr-2" />
-                      Issue Certificate
-                    </Button>
-                  </div>
+              <div className="bg-gray-50 dark:bg-slate-800/50 -m-4 mt-2 p-7 rounded-b-lg">
+                <div className="flex justify-end gap-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowIssueModal(false)} 
+                    className="px-6"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleIssueCertificate} 
+                    className="px-6 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
+                  >
+                    <Award className="w-4 h-4 mr-2" />
+                    Issue Certificate
+                  </Button>
                 </div>
               </div>
             </div>
@@ -1134,7 +1128,7 @@ Verification Code: ${certificate.verificationCode}
 
 
 
-              <div className="bg-gray-50 dark:bg-slate-800/50 -m-6 mt-6 p-6 rounded-b-lg">
+              <div className="bg-gray-50 dark:bg-slate-800/50 -m-6 mt-6 p-10 rounded-b-lg">
                 <div className="flex justify-between w-full">
                   <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
                     <Clock className="w-4 h-4" />

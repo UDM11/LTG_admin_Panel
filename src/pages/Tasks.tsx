@@ -204,6 +204,11 @@ export default function Tasks() {
   const [sortBy, setSortBy] = useState<'dueDate' | 'priority' | 'progress' | 'title'>('dueDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'kanban'>('grid');
+  const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showUpdateConfirmModal, setShowUpdateConfirmModal] = useState(false);
+
   
   const [newTask, setNewTask] = useState<TaskFormData>({
     title: '',
@@ -222,10 +227,17 @@ export default function Tasks() {
 
   // Modal management
   useEffect(() => {
-    const hasModal = showCreateModal || showEditModal || showViewModal || showDeleteModal;
+    const hasModal = showCreateModal || showEditModal || showViewModal || showDeleteModal || showBulkActions || showUpdateConfirmModal;
     document.body.style.overflow = hasModal ? 'hidden' : 'unset';
     return () => { document.body.style.overflow = 'unset'; };
-  }, [showCreateModal, showEditModal, showViewModal, showDeleteModal]);
+  }, [showCreateModal, showEditModal, showViewModal, showDeleteModal, showBulkActions, showUpdateConfirmModal]);
+
+  // Auto-hide bulk actions when no tasks selected
+  useEffect(() => {
+    if (selectedTasks.length === 0) {
+      setShowBulkActions(false);
+    }
+  }, [selectedTasks]);
 
   // Advanced filtering and sorting
   const filteredAndSortedTasks = useMemo(() => {
@@ -306,6 +318,23 @@ export default function Tasks() {
     setShowEditModal(true);
   }, []);
 
+  const handleUpdateTask = useCallback(() => {
+    setShowUpdateConfirmModal(true);
+  }, []);
+
+  const confirmUpdateTask = useCallback(() => {
+    if (!editingTask) return;
+    
+    setTasks(prev => prev.map(task => 
+      task.id === editingTask.id 
+        ? { ...editingTask, updatedAt: new Date().toISOString() }
+        : task
+    ));
+    setShowEditModal(false);
+    setEditingTask(null);
+    setShowUpdateConfirmModal(false);
+  }, [editingTask]);
+
   const handleViewTask = useCallback((task: Task) => {
     setViewingTask(task);
     setShowViewModal(true);
@@ -319,10 +348,71 @@ export default function Tasks() {
   const handleConfirmDelete = useCallback(() => {
     if (deletingTask) {
       setTasks(prev => prev.filter(t => t.id !== deletingTask.id));
+      setSelectedTasks(prev => prev.filter(id => id !== deletingTask.id));
       setShowDeleteModal(false);
       setDeletingTask(null);
     }
   }, [deletingTask]);
+
+  // Bulk Actions
+  const handleSelectTask = useCallback((taskId: string, selected: boolean) => {
+    setSelectedTasks(prev => 
+      selected 
+        ? [...prev, taskId]
+        : prev.filter(id => id !== taskId)
+    );
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    const allTaskIds = filteredAndSortedTasks.map(t => t.id);
+    setSelectedTasks(prev => 
+      prev.length === allTaskIds.length ? [] : allTaskIds
+    );
+  }, [filteredAndSortedTasks]);
+
+  const handleBulkStatusChange = useCallback((newStatus: Task['status']) => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setTasks(prev => prev.map(task => 
+        selectedTasks.includes(task.id)
+          ? { 
+              ...task, 
+              status: newStatus,
+              progress: newStatus === 'completed' ? 100 : task.progress,
+              completedDate: newStatus === 'completed' ? new Date().toISOString() : undefined,
+              updatedAt: new Date().toISOString()
+            }
+          : task
+      ));
+      setSelectedTasks([]);
+      setShowBulkActions(false);
+      setIsLoading(false);
+    }, 500);
+  }, [selectedTasks]);
+
+  const handleBulkDelete = useCallback(() => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setTasks(prev => prev.filter(t => !selectedTasks.includes(t.id)));
+      setSelectedTasks([]);
+      setShowBulkActions(false);
+      setIsLoading(false);
+    }, 500);
+  }, [selectedTasks]);
+
+  const handleBulkAssign = useCallback((assignee: string) => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setTasks(prev => prev.map(task => 
+        selectedTasks.includes(task.id)
+          ? { ...task, assignedTo: assignee, updatedAt: new Date().toISOString() }
+          : task
+      ));
+      setSelectedTasks([]);
+      setShowBulkActions(false);
+      setIsLoading(false);
+    }, 500);
+  }, [selectedTasks]);
 
   const handleStatusChange = useCallback((id: string, newStatus: Task['status']) => {
     setTasks(prev => prev.map(task => 
@@ -385,68 +475,77 @@ export default function Tasks() {
 
   return (
     <>
-      <div className="space-y-6">
-        {/* Enhanced Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="space-y-3 sm:space-y-4 lg:space-y-6 p-2 sm:p-4 lg:p-6">
+        {/* Enhanced Header - Responsive */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <div className="space-y-1">
-            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Task Management System
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="hidden sm:inline">Task Management System</span>
+              <span className="sm:hidden">Task Manager</span>
             </h1>
-            <p className="text-muted-foreground">Advanced task tracking and project management</p>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              <span className="hidden sm:inline">Advanced task tracking and project management</span>
+              <span className="sm:hidden">Track and manage tasks</span>
+            </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => window.location.reload()}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
+            <Button variant="outline" onClick={() => window.location.reload()} className="h-8 sm:h-9 lg:h-10 text-xs sm:text-sm px-2 sm:px-3">
+              <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Refresh</span>
+              <span className="sm:hidden">↻</span>
             </Button>
-            <Button onClick={() => setShowCreateModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Task
+            <Button onClick={() => setShowCreateModal(true)} className="h-8 sm:h-9 lg:h-10 text-xs sm:text-sm px-2 sm:px-3">
+              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Create Task</span>
+              <span className="sm:hidden">New</span>
             </Button>
           </div>
         </div>
 
-        {/* Advanced Stats Dashboard */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        {/* Advanced Stats Dashboard - Responsive */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 lg:gap-4">
           {[
-            { title: 'Total Tasks', value: stats.total, icon: FileText, color: 'text-blue-600', trend: '+12%' },
-            { title: 'Completed', value: stats.completed, icon: CheckCircle, color: 'text-green-600', trend: '+8%' },
-            { title: 'In Progress', value: stats.inProgress, icon: Activity, color: 'text-blue-600', trend: '+5%' },
-            { title: 'Overdue', value: stats.overdue, icon: AlertCircle, color: 'text-red-600', trend: '-2%' },
-            { title: 'Avg Progress', value: `${stats.avgProgress.toFixed(1)}%`, icon: TrendingUp, color: 'text-purple-600', trend: '+3%' },
-            { title: 'High Priority', value: stats.highPriority, icon: Flag, color: 'text-orange-600', trend: '+1%' }
+            { title: 'Total Tasks', shortTitle: 'Total', value: stats.total, icon: FileText, color: 'text-blue-600', trend: '+12%' },
+            { title: 'Completed', shortTitle: 'Done', value: stats.completed, icon: CheckCircle, color: 'text-green-600', trend: '+8%' },
+            { title: 'In Progress', shortTitle: 'Active', value: stats.inProgress, icon: Activity, color: 'text-blue-600', trend: '+5%' },
+            { title: 'Overdue', shortTitle: 'Late', value: stats.overdue, icon: AlertCircle, color: 'text-red-600', trend: '-2%' },
+            { title: 'Avg Progress', shortTitle: 'Avg %', value: `${stats.avgProgress.toFixed(1)}%`, icon: TrendingUp, color: 'text-purple-600', trend: '+3%' },
+            { title: 'High Priority', shortTitle: 'High Pri', value: stats.highPriority, icon: Flag, color: 'text-orange-600', trend: '+1%' }
           ].map((stat, index) => (
-            <Card key={stat.title} className="p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                  <p className="text-xl font-bold">{stat.value}</p>
-                  <p className="text-xs text-green-600 mt-1">{stat.trend}</p>
+            <Card key={stat.title} className="p-2 sm:p-3 lg:p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
+                    <span className="hidden sm:inline">{stat.title}</span>
+                    <span className="sm:hidden">{stat.shortTitle}</span>
+                  </p>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">{stat.value}</p>
+                  <p className="text-xs text-green-600 mt-0.5 sm:mt-1 hidden sm:block">{stat.trend}</p>
                 </div>
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                <stat.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${stat.color} flex-shrink-0`} />
               </div>
             </Card>
           ))}
         </div>
 
         {/* Advanced Filters and View Controls */}
-        <Card className="p-4 sm:p-6">
-          <div className="space-y-4">
-            <div className="flex flex-col lg:flex-row gap-4">
+        <Card className="p-3 sm:p-4 lg:p-6">
+          <div className="space-y-3 sm:space-y-4">
+            <div className="flex flex-col lg:flex-row gap-3 lg:gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search tasks, assignees, descriptions..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 h-9 sm:h-10"
                 />
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <select 
                   value={statusFilter} 
                   onChange={(e) => setStatusFilter(e.target.value as any)}
-                  className="px-3 py-2 border border-border rounded-md text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="px-2 sm:px-3 py-2 border border-border rounded-md text-xs sm:text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 h-9 sm:h-10"
                 >
                   <option value="all">All Status</option>
                   <option value="todo">To Do</option>
@@ -458,7 +557,7 @@ export default function Tasks() {
                 <select 
                   value={priorityFilter} 
                   onChange={(e) => setPriorityFilter(e.target.value as any)}
-                  className="px-3 py-2 border border-border rounded-md text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="px-2 sm:px-3 py-2 border border-border rounded-md text-xs sm:text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 h-9 sm:h-10"
                 >
                   <option value="all">All Priority</option>
                   <option value="low">Low</option>
@@ -469,22 +568,35 @@ export default function Tasks() {
                 <select 
                   value={departmentFilter} 
                   onChange={(e) => setDepartmentFilter(e.target.value)}
-                  className="px-3 py-2 border border-border rounded-md text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="px-2 sm:px-3 py-2 border border-border rounded-md text-xs sm:text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 h-9 sm:h-10"
                 >
                   <option value="all">All Departments</option>
                   {DEPARTMENTS.map(dept => (
                     <option key={dept} value={dept}>{dept}</option>
                   ))}
                 </select>
-                <Button variant="outline" size="sm" onClick={clearFilters}>
-                  Clear All
+                <Button variant="outline" size="sm" onClick={clearFilters} className="h-9 sm:h-10 text-xs sm:text-sm px-2 sm:px-3">
+                  <span className="hidden sm:inline">Clear All</span>
+                  <span className="sm:hidden">Clear</span>
                 </Button>
+                {selectedTasks.length > 0 && (
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    onClick={() => setShowBulkActions(true)}
+                    className="h-9 sm:h-10 text-xs sm:text-sm px-2 sm:px-3 bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Bulk Actions ({selectedTasks.length})</span>
+                    <span className="sm:hidden">Actions ({selectedTasks.length})</span>
+                  </Button>
+                )}
               </div>
             </div>
             
-            <div className="flex flex-wrap gap-2 items-center justify-between">
-              <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-sm text-muted-foreground hidden sm:inline">Sort by:</span>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center justify-between">
+              <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center w-full sm:w-auto">
+                <span className="text-sm text-muted-foreground hidden md:inline">Sort by:</span>
                 {['dueDate', 'priority', 'progress', 'title'].map(sort => (
                   <Button
                     key={sort}
@@ -498,26 +610,51 @@ export default function Tasks() {
                         setSortOrder('asc');
                       }
                     }}
-                    className="capitalize text-xs sm:text-sm"
+                    className="capitalize text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
                   >
-                    {sort.replace(/([A-Z])/g, ' $1')} {sortBy === sort && (sortOrder === 'desc' ? '↓' : '↑')}
+                    <span className="hidden sm:inline">{sort.replace(/([A-Z])/g, ' $1')}</span>
+                    <span className="sm:hidden">
+                      {sort === 'dueDate' ? 'Due' : 
+                       sort === 'priority' ? 'Pri' : 
+                       sort === 'progress' ? 'Prog' : 'Title'}
+                    </span>
+                    {sortBy === sort && (
+                      <span className="ml-1">{sortOrder === 'desc' ? '↓' : '↑'}</span>
+                    )}
                   </Button>
                 ))}
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-1 w-full sm:w-auto">
                 <Button
                   variant={viewMode === 'grid' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('grid')}
+                  className="flex-1 sm:flex-none h-7 sm:h-8 text-xs sm:text-sm"
                 >
-                  Grid
+                  <div className="flex items-center gap-1">
+                    <div className="grid grid-cols-2 gap-0.5 w-3 h-3">
+                      <div className="bg-current w-1 h-1 rounded-sm" />
+                      <div className="bg-current w-1 h-1 rounded-sm" />
+                      <div className="bg-current w-1 h-1 rounded-sm" />
+                      <div className="bg-current w-1 h-1 rounded-sm" />
+                    </div>
+                    <span className="hidden sm:inline">Grid</span>
+                  </div>
                 </Button>
                 <Button
                   variant={viewMode === 'list' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setViewMode('list')}
+                  className="flex-1 sm:flex-none h-7 sm:h-8 text-xs sm:text-sm"
                 >
-                  List
+                  <div className="flex items-center gap-1">
+                    <div className="flex flex-col gap-0.5 w-3 h-3">
+                      <div className="bg-current w-3 h-0.5 rounded-sm" />
+                      <div className="bg-current w-3 h-0.5 rounded-sm" />
+                      <div className="bg-current w-3 h-0.5 rounded-sm" />
+                    </div>
+                    <span className="hidden sm:inline">List</span>
+                  </div>
                 </Button>
               </div>
             </div>
@@ -526,205 +663,359 @@ export default function Tasks() {
 
         {/* Tasks Grid/List View */}
         {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
             {filteredAndSortedTasks.map((task) => (
-              <Card key={task.id} className="p-4 sm:p-6 hover:shadow-xl transition-all group">
-                <div className="space-y-4">
+              <Card key={task.id} className="group relative overflow-hidden border-l-4 border-l-transparent">
+                <div className="p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
                   {/* Task Header */}
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-lg line-clamp-1">{task.title}</h3>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="flex items-start gap-2">
+                        <h3 className="font-semibold text-sm sm:text-base lg:text-lg line-clamp-2 leading-tight">{task.title}</h3>
                         {isOverdue(task.dueDate, task.status) && (
-                          <Badge className="bg-red-100 text-red-800 text-xs">
+                          <Badge className="bg-red-100 text-red-800 text-xs flex-shrink-0">
                             <AlertCircle className="h-3 w-3 mr-1" />
-                            Overdue
+                            <span className="hidden sm:inline">Overdue</span>
+                            <span className="sm:hidden">!</span>
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 leading-relaxed">{task.description}</p>
                     </div>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleViewTask(task)}>
-                        <Eye className="h-4 w-4" />
+                    <div className="flex flex-col sm:flex-row gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => handleViewTask(task)}>
+                        <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleEditTask(task)}>
-                        <Edit className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => handleEditTask(task)}>
+                        <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteTask(task)}>
-                        <Trash2 className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => handleDeleteTask(task)}>
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                   </div>
 
                   {/* Task Details */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Badge className={`${getStatusColor(task.status)} flex items-center gap-1`}>
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <Badge className={`${getStatusColor(task.status)} flex items-center gap-1 text-xs`}>
                         {getStatusIcon(task.status)}
-                        {task.status.replace('-', ' ')}
+                        <span className="hidden sm:inline">{task.status.replace('-', ' ')}</span>
+                        <span className="sm:hidden">{task.status.charAt(0).toUpperCase()}</span>
                       </Badge>
-                      <Badge className={`${getPriorityColor(task.priority)} text-xs capitalize`}>
-                        <Flag className="h-3 w-3 mr-1" />
-                        {task.priority}
+                      <Badge className={`${getPriorityColor(task.priority)} text-xs capitalize flex items-center gap-1`}>
+                        <Flag className="h-3 w-3" />
+                        <span className="hidden sm:inline">{task.priority}</span>
+                        <span className="sm:hidden">{task.priority.charAt(0).toUpperCase()}</span>
                       </Badge>
                     </div>
 
                     {/* Progress Bar */}
                     <div className="space-y-1">
-                      <div className="flex justify-between text-sm">
+                      <div className="flex justify-between text-xs sm:text-sm">
                         <span className="text-muted-foreground">Progress</span>
                         <span className="font-medium">{task.progress}%</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 sm:h-2">
                         <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full transition-all duration-500 ease-out" 
                           style={{ width: `${task.progress}%` }}
                         />
                       </div>
                     </div>
 
-                    {/* Task Info */}
-                    <div className="grid grid-cols-1 gap-2 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
+                    {/* Task Info - Responsive Grid */}
+                    <div className="grid grid-cols-1 gap-1.5 sm:gap-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
                         <User className="h-3 w-3 flex-shrink-0" />
-                        <span className="truncate">{task.assignedTo}</span>
+                        <span className="truncate font-medium">{task.assignedTo}</span>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <Building className="h-3 w-3 flex-shrink-0" />
                         <span className="truncate">{task.department}</span>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <Calendar className="h-3 w-3 flex-shrink-0" />
-                        <span className="truncate">Due: {new Date(task.dueDate).toLocaleDateString()}</span>
+                        <span className="truncate">
+                          <span className="hidden sm:inline">Due: </span>
+                          {new Date(task.dueDate).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric',
+                            year: window.innerWidth > 640 ? 'numeric' : '2-digit'
+                          })}
+                        </span>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <Timer className="h-3 w-3 flex-shrink-0" />
                         <span className="truncate">{task.actualHours}h / {task.estimatedHours}h</span>
                       </div>
                     </div>
 
-                    {/* Tags */}
+                    {/* Tags - Responsive */}
                     {task.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1">
-                        {task.tags.slice(0, 3).map((tag, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
+                        {task.tags.slice(0, window.innerWidth > 640 ? 3 : 2).map((tag, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs px-1.5 py-0.5">
                             {tag}
                           </Badge>
                         ))}
-                        {task.tags.length > 3 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{task.tags.length - 3}
+                        {task.tags.length > (window.innerWidth > 640 ? 3 : 2) && (
+                          <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
+                            +{task.tags.length - (window.innerWidth > 640 ? 3 : 2)}
                           </Badge>
                         )}
                       </div>
                     )}
                   </div>
 
-                  {/* Quick Actions */}
-                  <div className="flex gap-2 pt-2">
+                  {/* Quick Actions - Responsive */}
+                  <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-2 pt-2">
                     {task.status !== 'completed' && (
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        className="flex-1" 
+                        className="flex-1 text-xs sm:text-sm h-7 sm:h-8" 
                         onClick={() => handleStatusChange(task.id, 'completed')}
                       >
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Complete
+                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        <span className="hidden sm:inline">Complete</span>
+                        <span className="sm:hidden">Done</span>
                       </Button>
                     )}
-                    <Button size="sm" className="flex-1" onClick={() => handleViewTask(task)}>
-                      <Eye className="h-4 w-4 mr-1" />
-                      View Details
+                    <Button 
+                      size="sm" 
+                      className="flex-1 text-xs sm:text-sm h-7 sm:h-8" 
+                      onClick={() => handleViewTask(task)}
+                    >
+                      <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      <span className="hidden sm:inline">View Details</span>
+                      <span className="sm:hidden">View</span>
                     </Button>
+                  </div>
+
+                  {/* Mobile-only status indicator */}
+                  <div className="sm:hidden absolute top-2 right-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      task.status === 'completed' ? 'bg-green-500' :
+                      task.status === 'in-progress' ? 'bg-blue-500' :
+                      task.status === 'review' ? 'bg-yellow-500' :
+                      task.status === 'cancelled' ? 'bg-red-500' : 'bg-gray-400'
+                    }`} />
                   </div>
                 </div>
               </Card>
             ))}
           </div>
         ) : (
-          // List View
-          <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="text-left p-4 font-medium">Task</th>
-                    <th className="text-left p-4 font-medium">Assignee</th>
-                    <th className="text-left p-4 font-medium">Status</th>
-                    <th className="text-left p-4 font-medium">Priority</th>
-                    <th className="text-left p-4 font-medium">Progress</th>
-                    <th className="text-left p-4 font-medium">Due Date</th>
-                    <th className="text-left p-4 font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAndSortedTasks.map((task) => (
-                    <tr key={task.id} className="border-t hover:bg-muted/30 transition-colors">
-                      <td className="p-4">
-                        <div>
-                          <p className="font-medium">{task.title}</p>
-                          <p className="text-sm text-muted-foreground line-clamp-1">{task.description}</p>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div>
-                          <p className="font-medium">{task.assignedTo}</p>
-                          <p className="text-sm text-muted-foreground">{task.department}</p>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <Badge className={`${getStatusColor(task.status)} flex items-center gap-1 w-fit`}>
+          // List View - Responsive
+          <div className="space-y-3">
+            {/* Desktop Table View */}
+            <Card className="hidden lg:block overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left p-3 xl:p-4 font-medium text-sm">Task</th>
+                      <th className="text-left p-3 xl:p-4 font-medium text-sm">Assignee</th>
+                      <th className="text-left p-3 xl:p-4 font-medium text-sm">Status</th>
+                      <th className="text-left p-3 xl:p-4 font-medium text-sm">Priority</th>
+                      <th className="text-left p-3 xl:p-4 font-medium text-sm">Progress</th>
+                      <th className="text-left p-3 xl:p-4 font-medium text-sm">Due Date</th>
+                      <th className="text-left p-3 xl:p-4 font-medium text-sm">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredAndSortedTasks.map((task) => (
+                      <tr key={task.id} className="border-t hover:bg-muted/30 transition-colors">
+                        <td className="p-3 xl:p-4">
+                          <div className="max-w-xs">
+                            <p className="font-medium text-sm xl:text-base line-clamp-1">{task.title}</p>
+                            <p className="text-xs xl:text-sm text-muted-foreground line-clamp-1">{task.description}</p>
+                          </div>
+                        </td>
+                        <td className="p-3 xl:p-4">
+                          <div>
+                            <p className="font-medium text-sm xl:text-base">{task.assignedTo}</p>
+                            <p className="text-xs xl:text-sm text-muted-foreground">{task.department}</p>
+                          </div>
+                        </td>
+                        <td className="p-3 xl:p-4">
+                          <Badge className={`${getStatusColor(task.status)} flex items-center gap-1 w-fit text-xs`}>
+                            {getStatusIcon(task.status)}
+                            {task.status.replace('-', ' ')}
+                          </Badge>
+                        </td>
+                        <td className="p-3 xl:p-4">
+                          <Badge className={`${getPriorityColor(task.priority)} capitalize w-fit text-xs`}>
+                            <Flag className="h-3 w-3 mr-1" />
+                            {task.priority}
+                          </Badge>
+                        </td>
+                        <td className="p-3 xl:p-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-12 xl:w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 xl:h-2">
+                              <div 
+                                className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full transition-all duration-300" 
+                                style={{ width: `${task.progress}%` }}
+                              />
+                            </div>
+                            <span className="text-xs xl:text-sm font-medium min-w-[2.5rem]">{task.progress}%</span>
+                          </div>
+                        </td>
+                        <td className="p-3 xl:p-4">
+                          <div className={`text-sm ${isOverdue(task.dueDate, task.status) ? 'text-red-600' : ''}`}>
+                            {new Date(task.dueDate).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              year: '2-digit' 
+                            })}
+                            {isOverdue(task.dueDate, task.status) && (
+                              <Badge className="bg-red-100 text-red-800 text-xs ml-2">
+                                Overdue
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-3 xl:p-4">
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" className="h-7 w-7 xl:h-8 xl:w-8" onClick={() => handleViewTask(task)}>
+                              <Eye className="h-3 w-3 xl:h-4 xl:w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 xl:h-8 xl:w-8" onClick={() => handleEditTask(task)}>
+                              <Edit className="h-3 w-3 xl:h-4 xl:w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 xl:h-8 xl:w-8" onClick={() => handleDeleteTask(task)}>
+                              <Trash2 className="h-3 w-3 xl:h-4 xl:w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {/* Mobile/Tablet Card List View */}
+            <div className="lg:hidden space-y-3">
+              {filteredAndSortedTasks.map((task) => (
+                <Card key={task.id} className="p-4 hover:shadow-lg transition-all">
+                  <div className="space-y-3">
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-base line-clamp-1">{task.title}</h3>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{task.description}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewTask(task)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditTask(task)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteTask(task)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Status and Priority */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge className={`${getStatusColor(task.status)} flex items-center gap-1 text-xs`}>
                           {getStatusIcon(task.status)}
                           {task.status.replace('-', ' ')}
                         </Badge>
-                      </td>
-                      <td className="p-4">
-                        <Badge className={`${getPriorityColor(task.priority)} capitalize w-fit`}>
+                        <Badge className={`${getPriorityColor(task.priority)} capitalize text-xs`}>
+                          <Flag className="h-3 w-3 mr-1" />
                           {task.priority}
                         </Badge>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-blue-600 h-2 rounded-full" 
-                              style={{ width: `${task.progress}%` }}
-                            />
-                          </div>
-                          <span className="text-sm font-medium">{task.progress}%</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className={`${isOverdue(task.dueDate, task.status) ? 'text-red-600' : ''}`}>
-                          {new Date(task.dueDate).toLocaleDateString()}
-                          {isOverdue(task.dueDate, task.status) && (
-                            <Badge className="bg-red-100 text-red-800 text-xs ml-2">
-                              Overdue
-                            </Badge>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => handleViewTask(task)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleEditTask(task)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDeleteTask(task)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                      {isOverdue(task.dueDate, task.status) && (
+                        <Badge className="bg-red-100 text-red-800 text-xs">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          Overdue
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Progress */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Progress</span>
+                        <span className="font-medium">{task.progress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div 
+                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300" 
+                          style={{ width: `${task.progress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Details Grid */}
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Assignee:</span>
+                        <p className="font-medium">{task.assignedTo}</p>
+                        <p className="text-xs text-muted-foreground">{task.department}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Due Date:</span>
+                        <p className={`font-medium ${isOverdue(task.dueDate, task.status) ? 'text-red-600' : ''}`}>
+                          {new Date(task.dueDate).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          })}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Tags */}
+                    {task.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {task.tags.slice(0, 4).map((tag, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                        {task.tags.length > 4 && (
+                          <Badge variant="secondary" className="text-xs">
+                            +{task.tags.length - 4}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-2 border-t">
+                      {task.status !== 'completed' && (
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1" 
+                          onClick={() => handleStatusChange(task.id, 'completed')}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Mark Complete
+                        </Button>
+                      )}
+                      <Button 
+                        size="sm" 
+                        className="flex-1" 
+                        onClick={() => handleViewTask(task)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
             </div>
-          </Card>
+          </div>
         )}
 
         {/* Empty State */}
@@ -974,28 +1265,21 @@ export default function Tasks() {
                 </div>
               </div>
 
-              <div className="bg-gray-50 dark:bg-slate-800/50 -m-6 mt-6 p-6 rounded-b-lg">
-                <div className="flex justify-between w-full">
-                  <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-                    <Clock className="w-4 h-4" />
-                    <span>Last updated: {new Date().toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setShowCreateModal(false)} 
-                      className="px-6"
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      onClick={handleCreateTask} 
-                      className="px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Task
-                    </Button>
-                  </div>
+              <div className="bg-gray-50 dark:bg-slate-800/50 p-6 border-t">
+                <div className="flex justify-end gap-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowCreateModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleCreateTask}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Task
+                  </Button>
                 </div>
               </div>
             </div>
@@ -1164,6 +1448,258 @@ export default function Tasks() {
         </>
       )}
 
+      {/* Advanced Edit Task Modal */}
+      {showEditModal && editingTask && (
+        <>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-40" onClick={() => setShowEditModal(false)} />
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div className="bg-gradient-to-br from-orange-50/50 to-red-50/50 dark:from-slate-900 dark:to-slate-800 rounded-xl w-full max-w-6xl max-h-[95vh] overflow-hidden shadow-2xl">
+              <div className="bg-gradient-to-r from-orange-600 to-red-600 text-white p-6 mb-6 relative">
+                <div className="flex items-center space-x-4 pr-12">
+                  <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                    <Edit className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-bold">Edit Task</h2>
+                    <p className="text-orange-100 text-sm">Update task details and track progress</p>
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setShowEditModal(false)} 
+                  className="absolute top-4 right-4 text-white hover:bg-white/20"
+                >
+                  <X className="h-6 w-6" />
+                </Button>
+              </div>
+              
+              <div className="overflow-y-auto max-h-[70vh] px-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Task Information */}
+                  <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-orange-100 dark:border-slate-700">
+                      <div className="flex items-center space-x-2 mb-6">
+                        <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-orange-600" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Task Details</h3>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Task Title</label>
+                          <Input
+                            value={editingTask.title}
+                            onChange={(e) => setEditingTask({...editingTask, title: e.target.value})}
+                            className="text-lg font-semibold"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+                          <textarea
+                            value={editingTask.description}
+                            onChange={(e) => setEditingTask({...editingTask, description: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 min-h-[120px]"
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
+                            <select 
+                              value={editingTask.category} 
+                              onChange={(e) => setEditingTask({...editingTask, category: e.target.value})}
+                              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            >
+                              {CATEGORIES.map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
+                            <select 
+                              value={editingTask.department} 
+                              onChange={(e) => setEditingTask({...editingTask, department: e.target.value})}
+                              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            >
+                              {DEPARTMENTS.map(dept => (
+                                <option key={dept} value={dept}>{dept}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Assignment & Timeline */}
+                    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-red-100 dark:border-slate-700">
+                      <div className="flex items-center space-x-2 mb-6">
+                        <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                          <Users className="w-5 h-5 text-red-600" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Assignment & Timeline</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Assigned To</label>
+                          <select 
+                            value={editingTask.assignedTo} 
+                            onChange={(e) => setEditingTask({...editingTask, assignedTo: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-red-500"
+                          >
+                            {ASSIGNEES.map(assignee => (
+                              <option key={assignee} value={assignee}>{assignee}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                          <Input
+                            type="email"
+                            value={editingTask.assignedEmail}
+                            onChange={(e) => setEditingTask({...editingTask, assignedEmail: e.target.value})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Due Date</label>
+                          <Input
+                            type="date"
+                            value={editingTask.dueDate}
+                            onChange={(e) => setEditingTask({...editingTask, dueDate: e.target.value})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Estimated Hours</label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={editingTask.estimatedHours}
+                            onChange={(e) => setEditingTask({...editingTask, estimatedHours: parseInt(e.target.value) || 0})}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Status & Progress */}
+                  <div className="space-y-6">
+                    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-purple-100 dark:border-slate-700">
+                      <div className="flex items-center space-x-2 mb-6">
+                        <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                          <Activity className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Status & Progress</h3>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+                          <select 
+                            value={editingTask.status} 
+                            onChange={(e) => setEditingTask({...editingTask, status: e.target.value as Task['status']})}
+                            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          >
+                            <option value="todo">To Do</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="review">Review</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Priority</label>
+                          <select 
+                            value={editingTask.priority} 
+                            onChange={(e) => setEditingTask({...editingTask, priority: e.target.value as Task['priority']})}
+                            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 capitalize"
+                          >
+                            <option value="low">Low Priority</option>
+                            <option value="medium">Medium Priority</option>
+                            <option value="high">High Priority</option>
+                            <option value="urgent">Urgent</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Progress ({editingTask.progress}%)</label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={editingTask.progress}
+                            onChange={(e) => setEditingTask({...editingTask, progress: parseInt(e.target.value)})}
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                          />
+                          <div className="w-full bg-gray-200 rounded-full h-3">
+                            <div 
+                              className="bg-gradient-to-r from-purple-500 to-purple-600 h-3 rounded-full transition-all duration-300" 
+                              style={{ width: `${editingTask.progress}%` }}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Actual Hours</label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={editingTask.actualHours}
+                            onChange={(e) => setEditingTask({...editingTask, actualHours: parseInt(e.target.value) || 0})}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tags */}
+                    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-green-100 dark:border-slate-700">
+                      <div className="flex items-center space-x-2 mb-4">
+                        <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                          <Flag className="w-4 h-4 text-green-600" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Tags</h3>
+                      </div>
+                      <Input
+                        placeholder="Enter tags separated by commas"
+                        value={editingTask.tags.join(', ')}
+                        onChange={(e) => setEditingTask({...editingTask, tags: e.target.value.split(',').map(tag => tag.trim()).filter(Boolean)})}
+                      />
+                      <div className="flex flex-wrap gap-1 mt-3">
+                        {editingTask.tags.map((tag, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 dark:bg-slate-800/50 p-6 border-t">
+                <div className="flex justify-between w-full">
+                  <div className="flex items-center space-x-2 text-sm text-gray-500">
+                    <Clock className="w-4 h-4" />
+                    <span>Last updated: {new Date(editingTask.updatedAt).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowEditModal(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleUpdateTask}
+                      className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Update Task
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Delete Confirmation Modal */}
       {showDeleteModal && deletingTask && (
         <>
@@ -1200,6 +1736,141 @@ export default function Tasks() {
                   </Button>
                 </div>
               </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Update Confirmation Modal */}
+      {showUpdateConfirmModal && editingTask && (
+        <>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-40" />
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div className="bg-background rounded-lg p-6 w-full max-w-md">
+              <div className="text-center space-y-4">
+                <div className="mx-auto w-12 h-12 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center">
+                  <Edit className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Update Task</h3>
+                  <p className="text-muted-foreground">
+                    Are you sure you want to update "<strong>{editingTask.title}</strong>"? All changes will be saved.
+                  </p>
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowUpdateConfirmModal(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={confirmUpdateTask}
+                    className="flex-1 bg-orange-600 hover:bg-orange-700"
+                  >
+                    Update Task
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Bulk Actions Modal */}
+      {showBulkActions && selectedTasks.length > 0 && (
+        <>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-40" onClick={() => setShowBulkActions(false)} />
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div className="bg-background rounded-lg p-6 w-full max-w-md shadow-2xl">
+              <div className="space-y-4">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold mb-2">Bulk Actions</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedTasks.length} task{selectedTasks.length > 1 ? 's' : ''} selected
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Change Status</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { status: 'todo', label: 'To Do', color: 'bg-gray-100 hover:bg-gray-200' },
+                        { status: 'in-progress', label: 'In Progress', color: 'bg-blue-100 hover:bg-blue-200' },
+                        { status: 'review', label: 'Review', color: 'bg-yellow-100 hover:bg-yellow-200' },
+                        { status: 'completed', label: 'Completed', color: 'bg-green-100 hover:bg-green-200' }
+                      ].map(({ status, label, color }) => (
+                        <Button
+                          key={status}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleBulkStatusChange(status as Task['status'])}
+                          className={`${color} text-xs`}
+                          disabled={isLoading}
+                        >
+                          {label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Reassign To</label>
+                    <select 
+                      onChange={(e) => e.target.value && handleBulkAssign(e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      disabled={isLoading}
+                    >
+                      <option value="">Select Assignee</option>
+                      {ASSIGNEES.map(assignee => (
+                        <option key={assignee} value={assignee}>{assignee}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="pt-2 border-t">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleBulkDelete}
+                      className="w-full"
+                      disabled={isLoading}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Selected Tasks
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowBulkActions(false)}
+                    className="flex-1"
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={() => setSelectedTasks([])}
+                    className="flex-1"
+                    disabled={isLoading}
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+              </div>
+
+              {isLoading && (
+                <div className="absolute inset-0 bg-background/80 rounded-lg flex items-center justify-center">
+                  <div className="flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">Processing...</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </>

@@ -36,7 +36,7 @@ export function Layout({ children }: LayoutProps) {
       <main
         className={cn(
           'pt-20 pb-8 px-6 transition-all duration-300',
-          sidebarCollapsed && !isMobile ? 'ml-16' : 'ml-64',
+          sidebarCollapsed && !isMobile ? 'ml-16' : 'ml-72',
           isMobile && 'ml-0'
         )}
       >
