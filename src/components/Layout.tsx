@@ -25,12 +25,12 @@ export function Layout({ children }: LayoutProps) {
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         isMobile={isMobile}
       />
-      <Navbar sidebarCollapsed={sidebarCollapsed && !isMobile} />
+      <Navbar sidebarCollapsed={sidebarCollapsed} />
       
       <main
         className={cn(
-          'pt-16 sm:pt-20 pb-4 sm:pb-8 px-3 sm:px-4 md:px-6 transition-all duration-300',
-          isMobile ? 'ml-0' : (sidebarCollapsed ? 'ml-16' : 'ml-72')
+          'pt-16 sm:pt-20 pb-20 md:pb-8 px-3 sm:px-4 md:px-6 transition-all duration-300',
+          sidebarCollapsed ? 'md:ml-16' : 'md:ml-72'
         )}
       >
         <div className="max-w-full overflow-x-auto">

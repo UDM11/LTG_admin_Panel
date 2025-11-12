@@ -191,7 +191,7 @@ export function Navbar({ sidebarCollapsed }: NavbarProps) {
     <header
       className={cn(
         'fixed top-0 right-0 z-30 h-14 sm:h-16 bg-gradient-to-r from-background to-background/95 backdrop-blur-sm border-b border-border/50 transition-all duration-300 shadow-sm',
-        isMobile ? 'left-0' : (sidebarCollapsed ? 'left-16' : 'left-72')
+        isMobile ? 'left-0' : (sidebarCollapsed ? 'md:left-16' : 'md:left-72')
       )}
     >
       <div className="flex h-full items-center justify-between px-3 sm:px-4 md:px-6">

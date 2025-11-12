@@ -6,17 +6,7 @@ import {
   Award, 
   Menu, 
   X, 
-  Settings,
-  Search,
-  ChevronDown,
-  ChevronRight,
-  FileText,
-  BarChart3,
-  Shield,
-  User,
-  Building,
-  Activity,
-  Eye
+  Search
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -70,26 +60,6 @@ const getNavigationItems = (counts: NavigationCounts, visitedPages: { [key: stri
     icon: Award,
     badge: visitedPages['/certificates'] ? undefined : counts.certificates,
     countKey: 'certificates'
-  },
-  {
-    name: 'Analytics',
-    href: '/analytics',
-    icon: BarChart3,
-    children: [
-      { name: 'Reports', href: '/analytics/reports', icon: FileText },
-      { name: 'Performance', href: '/analytics/performance', icon: Activity },
-      { name: 'Insights', href: '/analytics/insights', icon: Eye }
-    ]
-  },
-  {
-    name: 'Management',
-    href: '/management',
-    icon: Settings,
-    children: [
-      { name: 'Departments', href: '/management/departments', icon: Building },
-      { name: 'Roles', href: '/management/roles', icon: Shield },
-      { name: 'Permissions', href: '/management/permissions', icon: User }
-    ]
   }
 ];
 
@@ -250,28 +220,18 @@ export function Sidebar({ collapsed, onToggle, isMobile: isMobileProp }: Sidebar
 
   return (
     <>
-      {/* Mobile Overlay */}
-      {isMobile && !collapsed && (
-        <div 
-          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm" 
-          onClick={onToggle}
-        />
-      )}
-      
+      {/* Desktop Sidebar */}
       <aside
         className={cn(
           'fixed left-0 top-0 z-40 h-screen bg-gradient-to-b from-sidebar to-sidebar/95 backdrop-blur-sm border-r border-sidebar-border/50 transition-all duration-300 shadow-xl',
-          isMobile ? (
-            collapsed ? '-translate-x-full w-72' : 'translate-x-0 w-72'
-          ) : (
-            collapsed ? 'w-16' : 'w-72'
-          )
+          'hidden md:block',
+          collapsed ? 'w-16' : 'w-72'
         )}
       >
       <div className="flex h-full flex-col">
         {/* Header */}
         <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border/50 bg-gradient-to-r from-primary/10 to-primary/5">
-          {(!collapsed || isMobile) && (
+          {!collapsed && (
             <div className="flex items-center space-x-3">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-primary-foreground font-bold text-lg shadow-lg">
                 L
@@ -288,12 +248,12 @@ export function Sidebar({ collapsed, onToggle, isMobile: isMobileProp }: Sidebar
             onClick={onToggle}
             className="text-sidebar-foreground hover:bg-sidebar-accent h-8 w-8"
           >
-            {collapsed || isMobile ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
+            {collapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
           </Button>
         </div>
 
         {/* Search Bar */}
-        {(!collapsed || isMobile) && (
+        {!collapsed && (
           <div className="p-4 border-b border-sidebar-border/30">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -313,6 +273,32 @@ export function Sidebar({ collapsed, onToggle, isMobile: isMobileProp }: Sidebar
         </nav>
       </div>
     </aside>
+
+    {/* Mobile Bottom Navigation */}
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-sidebar to-sidebar/95 backdrop-blur-sm border-t border-sidebar-border/50 shadow-xl">
+      <div className="flex items-center justify-around px-2 py-3">
+        {navigation.slice(0, 5).map((item) => (
+          <NavLink
+            key={item.name}
+            to={item.href}
+            end
+            className="flex flex-col items-center justify-center p-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-all duration-200 min-w-0 flex-1 relative"
+            activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+          >
+            <item.icon className="h-5 w-5 mb-1" />
+            <span className="text-xs font-medium truncate">{item.name}</span>
+            {item.badge && !loading && (
+              <Badge 
+                variant={typeof item.badge === 'string' ? 'secondary' : 'default'} 
+                className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-xs min-w-4"
+              >
+                {typeof item.badge === 'number' && item.badge > 99 ? '99+' : item.badge}
+              </Badge>
+            )}
+          </NavLink>
+        ))}
+      </div>
+    </nav>
     </>
   );
 }

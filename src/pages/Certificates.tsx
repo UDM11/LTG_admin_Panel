@@ -408,9 +408,9 @@ Verification Code: ${certificate.verificationCode}
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Enhanced Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Certificate Management System</h1>
             <p className="text-muted-foreground">Advanced certificate lifecycle management with analytics</p>
@@ -428,7 +428,7 @@ Verification Code: ${certificate.verificationCode}
         </div>
 
         {/* Advanced Stats Dashboard */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[
             { title: 'Total Certificates', value: stats.total, icon: FileText, color: 'text-blue-600', trend: '+12%' },
             { title: 'Issued', value: stats.issued, icon: CheckCircle, color: 'text-green-600', trend: '+8%' },
@@ -529,7 +529,7 @@ Verification Code: ${certificate.verificationCode}
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredAndSortedCertificates.map((certificate) => (
             <Card key={certificate.id} className="p-4 sm:p-6 hover:shadow-xl transition-all group">
               <div className="space-y-4">
