@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   ListTodo, 
@@ -19,11 +19,13 @@ import {
   Eye
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { navigationService, NavigationCounts } from '@/services/navigationService';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -38,32 +40,36 @@ interface NavigationItem {
   badge?: string | number;
   children?: NavigationItem[];
   isNew?: boolean;
+  countKey?: keyof NavigationCounts;
 }
 
-const navigation: NavigationItem[] = [
+const getNavigationItems = (counts: NavigationCounts, visitedPages: { [key: string]: boolean }): NavigationItem[] => [
   { 
     name: 'Dashboard', 
     href: '/', 
     icon: LayoutDashboard,
-    badge: 'New'
+    badge: visitedPages['/'] ? undefined : 'New'
   },
   { 
     name: 'Tasks', 
     href: '/tasks', 
     icon: ListTodo,
-    badge: 12
+    badge: visitedPages['/tasks'] ? undefined : counts.tasks,
+    countKey: 'tasks'
   },
   { 
     name: 'Interns', 
     href: '/interns', 
     icon: Users,
-    badge: 156
+    badge: visitedPages['/interns'] ? undefined : counts.interns,
+    countKey: 'interns'
   },
   { 
     name: 'Certificates', 
     href: '/certificates', 
     icon: Award,
-    badge: 32
+    badge: visitedPages['/certificates'] ? undefined : counts.certificates,
+    countKey: 'certificates'
   },
   {
     name: 'Analytics',
@@ -89,10 +95,45 @@ const navigation: NavigationItem[] = [
 
 
 
-export function Sidebar({ collapsed, onToggle, isMobile }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, isMobile: isMobileProp }: SidebarProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isMobileHook = useIsMobile();
+  const isMobile = isMobileProp ?? isMobileHook;
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const [counts, setCounts] = useState<NavigationCounts>({ tasks: 0, interns: 0, certificates: 0 });
+  const [visitedPages, setVisitedPages] = useState<{ [key: string]: boolean }>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [navigationCounts, visited] = await Promise.all([
+          navigationService.getNavigationCounts(),
+          Promise.resolve(navigationService.getVisitedPages())
+        ]);
+        setCounts(navigationCounts);
+        setVisitedPages(visited);
+      } catch (error) {
+        console.error('Error loading navigation data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    // Mark current page as visited
+    if (!loading && location.pathname) {
+      navigationService.markPageAsVisited(location.pathname);
+      setVisitedPages(prev => ({ ...prev, [location.pathname]: true }));
+    }
+  }, [location.pathname, loading]);
+
+  const navigation = getNavigationItems(counts, visitedPages);
 
 
 
@@ -131,7 +172,7 @@ export function Sidebar({ collapsed, onToggle, isMobile }: SidebarProps) {
                 {(!collapsed || isMobile) && (
                   <>
                     <span className="font-medium">{item.name}</span>
-                    {item.badge && (
+                    {item.badge && !loading && (
                       <Badge 
                         variant={typeof item.badge === 'string' ? 'secondary' : 'default'} 
                         className="text-xs"
@@ -167,7 +208,7 @@ export function Sidebar({ collapsed, onToggle, isMobile }: SidebarProps) {
                 {(!collapsed || isMobile) && (
                   <>
                     <span className="font-medium">{item.name}</span>
-                    {item.badge && (
+                    {item.badge && !loading && (
                       <Badge 
                         variant={typeof item.badge === 'string' ? 'secondary' : 'default'} 
                         className="text-xs"
@@ -188,7 +229,7 @@ export function Sidebar({ collapsed, onToggle, isMobile }: SidebarProps) {
           {collapsed && !isMobile && (
             <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
               {item.name}
-              {item.badge && (
+              {item.badge && !loading && (
                 <span className="ml-2 px-1.5 py-0.5 bg-primary rounded text-xs">
                   {item.badge}
                 </span>
@@ -208,13 +249,25 @@ export function Sidebar({ collapsed, onToggle, isMobile }: SidebarProps) {
   };
 
   return (
-    <aside
-      className={cn(
-        'fixed left-0 top-0 z-40 h-screen bg-gradient-to-b from-sidebar to-sidebar/95 backdrop-blur-sm border-r border-sidebar-border/50 transition-all duration-300 shadow-xl',
-        collapsed && !isMobile ? 'w-16' : 'w-72',
-        isMobile && collapsed && '-translate-x-full'
+    <>
+      {/* Mobile Overlay */}
+      {isMobile && !collapsed && (
+        <div 
+          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm" 
+          onClick={onToggle}
+        />
       )}
-    >
+      
+      <aside
+        className={cn(
+          'fixed left-0 top-0 z-40 h-screen bg-gradient-to-b from-sidebar to-sidebar/95 backdrop-blur-sm border-r border-sidebar-border/50 transition-all duration-300 shadow-xl',
+          isMobile ? (
+            collapsed ? '-translate-x-full w-72' : 'translate-x-0 w-72'
+          ) : (
+            collapsed ? 'w-16' : 'w-72'
+          )
+        )}
+      >
       <div className="flex h-full flex-col">
         {/* Header */}
         <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border/50 bg-gradient-to-r from-primary/10 to-primary/5">
@@ -260,5 +313,6 @@ export function Sidebar({ collapsed, onToggle, isMobile }: SidebarProps) {
         </nav>
       </div>
     </aside>
+    </>
   );
 }

@@ -23,19 +23,19 @@ export function StatsCard({ title, value, icon: Icon, trend, color = 'primary' }
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <h3 className="text-2xl font-bold mt-2">{value}</h3>
+      <CardContent className="p-3 sm:p-4 lg:p-6">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{title}</p>
+            <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mt-1 sm:mt-2">{value}</h3>
             {trend && (
-              <p className={cn('text-xs mt-2', trend.isPositive ? 'text-success' : 'text-destructive')}>
+              <p className={cn('text-xs mt-1 sm:mt-2 hidden sm:block', trend.isPositive ? 'text-success' : 'text-destructive')}>
                 {trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value)}% from last week
               </p>
             )}
           </div>
-          <div className={cn('h-12 w-12 rounded-lg flex items-center justify-center', colorClasses[color])}>
-            <Icon className="h-6 w-6" />
+          <div className={cn('h-10 w-10 sm:h-12 sm:w-12 rounded-lg flex items-center justify-center flex-shrink-0', colorClasses[color])}>
+            <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
         </div>
       </CardContent>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { internService, Intern } from '@/services/backendless';
 import { 
   Search, 
   Plus, 
@@ -41,98 +42,10 @@ import {
   X
 } from 'lucide-react';
 
-interface Intern {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  position: string;
-  department: string;
-  startDate: string;
-  endDate: string;
-  status: 'active' | 'completed' | 'pending' | 'paused';
-  progress: number;
-  avatar?: string;
-  location: string;
-  supervisor: string;
-  tasksCompleted: number;
-  totalTasks: number;
-  rating: number;
-}
-
-const mockInterns: Intern[] = [
-  {
-    id: '1',
-    name: 'Sarah Johnson',
-    email: 'sarah.johnson@ltg.com',
-    phone: '+1 (555) 123-4567',
-    position: 'Frontend Developer',
-    department: 'Engineering',
-    startDate: '2024-01-15',
-    endDate: '2024-06-15',
-    status: 'active',
-    progress: 75,
-    location: 'New York, NY',
-    supervisor: 'John Smith',
-    tasksCompleted: 15,
-    totalTasks: 20,
-    rating: 4.8
-  },
-  {
-    id: '2',
-    name: 'Michael Chen',
-    email: 'michael.chen@ltg.com',
-    phone: '+1 (555) 234-5678',
-    position: 'Data Analyst',
-    department: 'Analytics',
-    startDate: '2024-02-01',
-    endDate: '2024-07-01',
-    status: 'active',
-    progress: 60,
-    location: 'San Francisco, CA',
-    supervisor: 'Emily Davis',
-    tasksCompleted: 12,
-    totalTasks: 18,
-    rating: 4.6
-  },
-  {
-    id: '3',
-    name: 'Emma Wilson',
-    email: 'emma.wilson@ltg.com',
-    phone: '+1 (555) 345-6789',
-    position: 'UX Designer',
-    department: 'Design',
-    startDate: '2023-12-01',
-    endDate: '2024-05-01',
-    status: 'completed',
-    progress: 100,
-    location: 'Austin, TX',
-    supervisor: 'Alex Rodriguez',
-    tasksCompleted: 25,
-    totalTasks: 25,
-    rating: 4.9
-  },
-  {
-    id: '4',
-    name: 'David Kumar',
-    email: 'david.kumar@ltg.com',
-    phone: '+1 (555) 456-7890',
-    position: 'Backend Developer',
-    department: 'Engineering',
-    startDate: '2024-03-01',
-    endDate: '2024-08-01',
-    status: 'pending',
-    progress: 25,
-    location: 'Seattle, WA',
-    supervisor: 'Lisa Thompson',
-    tasksCompleted: 5,
-    totalTasks: 22,
-    rating: 4.2
-  }
-];
-
 export default function Interns() {
-  const [interns, setInterns] = useState<Intern[]>(mockInterns);
+  const [interns, setInterns] = useState<Intern[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
@@ -150,6 +63,23 @@ export default function Interns() {
   const [updateConfirmDialogOpen, setUpdateConfirmDialogOpen] = useState(false);
   const [internToDelete, setInternToDelete] = useState<Intern | null>(null);
   const { toast } = useToast();
+
+  // Load interns from Backendless
+  useEffect(() => {
+    const loadInterns = async () => {
+      try {
+        setLoading(true);
+        const data = await internService.getAllInterns();
+        setInterns(data);
+      } catch (error) {
+        console.error('Failed to load interns:', error);
+        toast({ title: "Error", description: "Failed to load interns", variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadInterns();
+  }, [toast]);
 
   const filteredInterns = useMemo(() => {
     return interns.filter(intern => {
@@ -189,35 +119,43 @@ export default function Interns() {
     avgProgress: Math.round(interns.reduce((acc, i) => acc + i.progress, 0) / interns.length)
   };
 
-  const handleAddIntern = () => {
+  const handleAddIntern = useCallback(async () => {
     if (!formData.name || !formData.email || !formData.position) {
       toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" });
       return;
     }
     
-    const newIntern: Intern = {
-      id: Date.now().toString(),
-      name: formData.name!,
-      email: formData.email!,
-      phone: formData.phone || '',
-      position: formData.position!,
-      department: formData.department || 'Engineering',
-      startDate: formData.startDate || new Date().toISOString().split('T')[0],
-      endDate: formData.endDate || new Date(Date.now() + 6 * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      status: formData.status as any || 'pending',
-      progress: formData.progress || 0,
-      location: formData.location || '',
-      supervisor: formData.supervisor || '',
-      tasksCompleted: 0,
-      totalTasks: formData.totalTasks || 10,
-      rating: 0
-    };
-    
-    setInterns([...interns, newIntern]);
-    setFormData({});
-    closeAddDialog();
-    toast({ title: "Success", description: "Intern added successfully" });
-  };
+    try {
+      setIsCreating(true);
+      const newIntern = {
+        name: formData.name!,
+        email: formData.email!,
+        phone: formData.phone || '',
+        position: formData.position!,
+        department: formData.department || 'Engineering',
+        startDate: formData.startDate || new Date().toISOString().split('T')[0],
+        endDate: formData.endDate || new Date(Date.now() + 6 * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        status: formData.status as any || 'pending',
+        progress: formData.progress || 0,
+        location: formData.location || '',
+        supervisor: formData.supervisor || '',
+        tasksCompleted: 0,
+        totalTasks: formData.totalTasks || 10,
+        rating: 0
+      };
+      
+      const savedIntern = await internService.createIntern(newIntern);
+      setInterns([...interns, savedIntern]);
+      setFormData({});
+      closeAddDialog();
+      toast({ title: "Success", description: "Intern added successfully" });
+    } catch (error) {
+      console.error('Failed to create intern:', error);
+      toast({ title: "Error", description: "Failed to create intern", variant: "destructive" });
+    } finally {
+      setIsCreating(false);
+    }
+  }, [formData, interns, toast]);
 
   const handleEditIntern = () => {
     if (!editingIntern || !formData.name || !formData.email) {
@@ -227,15 +165,21 @@ export default function Interns() {
     setUpdateConfirmDialogOpen(true);
   };
 
-  const confirmUpdateIntern = () => {
+  const confirmUpdateIntern = useCallback(async () => {
     if (!editingIntern) return;
     
-    const updatedIntern = { ...editingIntern, ...formData };
-    setInterns(interns.map(i => i.id === editingIntern.id ? updatedIntern : i));
-    closeEditDialog();
-    setUpdateConfirmDialogOpen(false);
-    toast({ title: "Success", description: "Intern profile updated successfully" });
-  };
+    try {
+      const updatedIntern = { ...editingIntern, ...formData };
+      await internService.updateIntern(updatedIntern);
+      setInterns(interns.map(i => i.objectId === editingIntern.objectId ? updatedIntern : i));
+      closeEditDialog();
+      setUpdateConfirmDialogOpen(false);
+      toast({ title: "Success", description: "Intern profile updated successfully" });
+    } catch (error) {
+      console.error('Failed to update intern:', error);
+      toast({ title: "Error", description: "Failed to update intern", variant: "destructive" });
+    }
+  }, [editingIntern, formData, interns, toast]);
 
   const handleDeleteIntern = (intern: Intern) => {
     setInternToDelete(intern);
@@ -243,23 +187,29 @@ export default function Interns() {
     document.body.style.overflow = 'hidden';
   };
 
-  const confirmDeleteIntern = () => {
-    if (internToDelete) {
-      setInterns(prevInterns => prevInterns.filter(i => i.id !== internToDelete.id));
-      setSelectedInterns(prevSelected => prevSelected.filter(id => id !== internToDelete.id));
-      toast({ 
-        title: "Success", 
-        description: `${internToDelete.name} has been deleted successfully`,
-        variant: "default"
-      });
-      setDeleteDialogOpen(false);
-      setInternToDelete(null);
-      document.body.style.overflow = 'unset';
+  const confirmDeleteIntern = useCallback(async () => {
+    if (internToDelete && internToDelete.objectId) {
+      try {
+        await internService.deleteIntern(internToDelete.objectId);
+        setInterns(prevInterns => prevInterns.filter(i => i.objectId !== internToDelete.objectId));
+        setSelectedInterns(prevSelected => prevSelected.filter(id => id !== internToDelete.objectId));
+        toast({ 
+          title: "Success", 
+          description: `${internToDelete.name} has been deleted successfully`,
+          variant: "default"
+        });
+        setDeleteDialogOpen(false);
+        setInternToDelete(null);
+        document.body.style.overflow = 'unset';
+      } catch (error) {
+        console.error('Failed to delete intern:', error);
+        toast({ title: "Error", description: "Failed to delete intern", variant: "destructive" });
+      }
     }
-  };
+  }, [internToDelete, toast]);
 
   const handleBulkDelete = () => {
-    const selectedInternsData = interns.filter(i => selectedInterns.includes(i.id));
+    const selectedInternsData = interns.filter(i => selectedInterns.includes(i.objectId!));
     if (selectedInternsData.length === 1) {
       // Use single delete dialog for one intern
       setInternToDelete(selectedInternsData[0]);
@@ -272,24 +222,30 @@ export default function Interns() {
     }
   };
 
-  const confirmBulkDelete = () => {
+  const confirmBulkDelete = useCallback(async () => {
     const deletedCount = selectedInterns.length;
-    setInterns(prevInterns => prevInterns.filter(i => !selectedInterns.includes(i.id)));
-    setSelectedInterns([]);
-    setBulkDeleteDialogOpen(false);
-    document.body.style.overflow = 'unset';
-    toast({ 
-      title: "Success", 
-      description: `${deletedCount} intern${deletedCount > 1 ? 's' : ''} deleted successfully`,
-      variant: "default"
-    });
-  };
+    try {
+      await Promise.all(selectedInterns.map(id => internService.deleteIntern(id)));
+      setInterns(prevInterns => prevInterns.filter(i => !selectedInterns.includes(i.objectId!)));
+      setSelectedInterns([]);
+      setBulkDeleteDialogOpen(false);
+      document.body.style.overflow = 'unset';
+      toast({ 
+        title: "Success", 
+        description: `${deletedCount} intern${deletedCount > 1 ? 's' : ''} deleted successfully`,
+        variant: "default"
+      });
+    } catch (error) {
+      console.error('Failed to delete interns:', error);
+      toast({ title: "Error", description: "Failed to delete interns", variant: "destructive" });
+    }
+  }, [selectedInterns, toast]);
 
   const handleSelectAll = () => {
     if (selectedInterns.length === filteredInterns.length) {
       setSelectedInterns([]);
     } else {
-      setSelectedInterns(filteredInterns.map(i => i.id));
+      setSelectedInterns(filteredInterns.map(i => i.objectId!));
     }
   };
 
@@ -599,9 +555,22 @@ Report generated on: ${new Date().toLocaleString()}
                 <Button variant="outline" onClick={closeAddDialog}>
                   Cancel
                 </Button>
-                <Button onClick={handleAddIntern} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Create Intern
+                <Button 
+                  onClick={handleAddIntern} 
+                  disabled={isCreating}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50"
+                >
+                  {isCreating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Create Intern
+                    </>
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -721,9 +690,14 @@ Report generated on: ${new Date().toLocaleString()}
       </Card>
 
       {/* Interns Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredInterns.map((intern) => (
-          <Card key={intern.id}>
+      {loading ? (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredInterns.map((intern) => (
+          <Card key={intern.objectId}>
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
@@ -830,8 +804,9 @@ Report generated on: ${new Date().toLocaleString()}
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {filteredInterns.length === 0 && (
         <Card className="p-12">
@@ -1205,9 +1180,9 @@ Report generated on: ${new Date().toLocaleString()}
                   </p>
                   <div className="max-h-32 overflow-y-auto space-y-1">
                     {interns
-                      .filter(intern => selectedInterns.includes(intern.id))
+                      .filter(intern => selectedInterns.includes(intern.objectId!))
                       .map(intern => (
-                        <div key={intern.id} className="flex items-center space-x-2 text-sm">
+                        <div key={intern.objectId} className="flex items-center space-x-2 text-sm">
                           <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                           <span className="font-medium text-gray-900 dark:text-gray-100">{intern.name}</span>
                           <span className="text-gray-500 dark:text-gray-400">({intern.position})</span>

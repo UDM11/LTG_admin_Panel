@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { taskService, Task, Comment, SubTask } from '@/services/backendless';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,44 +44,7 @@ import {
   Phone
 } from 'lucide-react';
 
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  assignedTo: string;
-  assignedEmail: string;
-  assignedPhone: string;
-  assignedBy: string;
-  department: string;
-  category: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'todo' | 'in-progress' | 'review' | 'completed' | 'cancelled';
-  progress: number;
-  startDate: string;
-  dueDate: string;
-  completedDate?: string;
-  estimatedHours: number;
-  actualHours: number;
-  tags: string[];
-  attachments: string[];
-  comments: Comment[];
-  subtasks: SubTask[];
-  createdAt: string;
-  updatedAt: string;
-}
 
-interface Comment {
-  id: string;
-  author: string;
-  content: string;
-  timestamp: string;
-}
-
-interface SubTask {
-  id: string;
-  title: string;
-  completed: boolean;
-}
 
 interface TaskFormData {
   title: string;
@@ -97,91 +61,7 @@ interface TaskFormData {
   attachments: File[];
 }
 
-const mockTasks: Task[] = [
-  {
-    id: '1',
-    title: 'Design System Implementation',
-    description: 'Create a comprehensive design system for the admin panel with reusable components',
-    assignedTo: 'John Doe',
-    assignedEmail: 'john.doe@company.com',
-    assignedPhone: '+1-555-0123',
-    assignedBy: 'Sarah Manager',
-    department: 'Design',
-    category: 'Development',
-    priority: 'high',
-    status: 'in-progress',
-    progress: 75,
-    startDate: '2024-01-10',
-    dueDate: '2024-01-25',
-    estimatedHours: 40,
-    actualHours: 30,
-    tags: ['design', 'frontend', 'components'],
-    attachments: ['design-specs.pdf', 'mockups.fig'],
-    comments: [
-      { id: '1', author: 'Sarah Manager', content: 'Great progress so far!', timestamp: '2024-01-15T10:30:00Z' },
-      { id: '2', author: 'John Doe', content: 'Working on the final components', timestamp: '2024-01-16T14:20:00Z' }
-    ],
-    subtasks: [
-      { id: '1', title: 'Create button components', completed: true },
-      { id: '2', title: 'Design form elements', completed: true },
-      { id: '3', title: 'Build navigation components', completed: false }
-    ],
-    createdAt: '2024-01-10T09:00:00Z',
-    updatedAt: '2024-01-16T14:20:00Z'
-  },
-  {
-    id: '2',
-    title: 'API Integration Testing',
-    description: 'Comprehensive testing of all API endpoints and error handling',
-    assignedTo: 'Jane Smith',
-    assignedEmail: 'jane.smith@company.com',
-    assignedPhone: '+1-555-0124',
-    assignedBy: 'Mike Lead',
-    department: 'Engineering',
-    category: 'Testing',
-    priority: 'medium',
-    status: 'review',
-    progress: 90,
-    startDate: '2024-01-12',
-    dueDate: '2024-01-20',
-    estimatedHours: 25,
-    actualHours: 22,
-    tags: ['api', 'testing', 'backend'],
-    attachments: ['test-results.xlsx'],
-    comments: [],
-    subtasks: [
-      { id: '1', title: 'Test authentication endpoints', completed: true },
-      { id: '2', title: 'Test CRUD operations', completed: true },
-      { id: '3', title: 'Document test cases', completed: false }
-    ],
-    createdAt: '2024-01-12T10:00:00Z',
-    updatedAt: '2024-01-18T16:45:00Z'
-  },
-  {
-    id: '3',
-    title: 'Database Optimization',
-    description: 'Optimize database queries and improve performance',
-    assignedTo: 'Mike Johnson',
-    assignedEmail: 'mike.johnson@company.com',
-    assignedPhone: '+1-555-0125',
-    assignedBy: 'Tech Lead',
-    department: 'Engineering',
-    category: 'Database',
-    priority: 'urgent',
-    status: 'todo',
-    progress: 0,
-    startDate: '2024-01-20',
-    dueDate: '2024-01-30',
-    estimatedHours: 35,
-    actualHours: 0,
-    tags: ['database', 'performance', 'optimization'],
-    attachments: [],
-    comments: [],
-    subtasks: [],
-    createdAt: '2024-01-18T11:00:00Z',
-    updatedAt: '2024-01-18T11:00:00Z'
-  }
-];
+
 
 const DEPARTMENTS = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR', 'Finance'];
 const CATEGORIES = ['Development', 'Testing', 'Design', 'Research', 'Documentation', 'Database', 'Security'];
@@ -193,7 +73,9 @@ export default function Tasks() {
   const [priorityFilter, setPriorityFilter] = useState<'all' | Task['priority']>('all');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -206,7 +88,7 @@ export default function Tasks() {
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'kanban'>('grid');
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [showBulkActions, setShowBulkActions] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isBulkLoading, setIsBulkLoading] = useState(false);
   const [showUpdateConfirmModal, setShowUpdateConfirmModal] = useState(false);
 
   
@@ -224,6 +106,22 @@ export default function Tasks() {
     tags: [],
     attachments: []
   });
+
+  // Load tasks from Backendless
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        setLoading(true);
+        const data = await taskService.getAllTasks();
+        setTasks(data);
+      } catch (error) {
+        console.error('Failed to load tasks:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadTasks();
+  }, []);
 
   // Modal management
   useEffect(() => {
@@ -286,31 +184,38 @@ export default function Tasks() {
   }, [tasks]);
 
   // Event handlers
-  const handleCreateTask = useCallback(() => {
+  const handleCreateTask = useCallback(async () => {
     if (!newTask.title || !newTask.assignedTo) return;
 
-    const task: Task = {
-      id: Date.now().toString(),
-      ...newTask,
-      assignedBy: 'Current User',
-      status: 'todo',
-      progress: 0,
-      startDate: new Date().toISOString().split('T')[0],
-      actualHours: 0,
-      attachments: newTask.attachments.map(f => f.name),
-      comments: [],
-      subtasks: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+    try {
+      setIsCreating(true);
+      const task = {
+        ...newTask,
+        assignedBy: 'Current User',
+        status: 'todo' as const,
+        progress: 0,
+        startDate: new Date().toISOString().split('T')[0],
+        actualHours: 0,
+        attachmentUrls: [],
+        comments: [],
+        subtasks: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
 
-    setTasks(prev => [...prev, task]);
-    setNewTask({
-      title: '', description: '', assignedTo: '', assignedEmail: '', assignedPhone: '',
-      department: '', category: '', priority: 'medium', dueDate: '', estimatedHours: 0,
-      tags: [], attachments: []
-    });
-    setShowCreateModal(false);
+      const savedTask = await taskService.createTask(task, newTask.attachments);
+      setTasks(prev => [...prev, savedTask]);
+      setNewTask({
+        title: '', description: '', assignedTo: '', assignedEmail: '', assignedPhone: '',
+        department: '', category: '', priority: 'medium', dueDate: '', estimatedHours: 0,
+        tags: [], attachments: []
+      });
+      setShowCreateModal(false);
+    } catch (error) {
+      console.error('Failed to create task:', error);
+    } finally {
+      setIsCreating(false);
+    }
   }, [newTask]);
 
   const handleEditTask = useCallback((task: Task) => {
@@ -322,17 +227,21 @@ export default function Tasks() {
     setShowUpdateConfirmModal(true);
   }, []);
 
-  const confirmUpdateTask = useCallback(() => {
+  const confirmUpdateTask = useCallback(async () => {
     if (!editingTask) return;
     
-    setTasks(prev => prev.map(task => 
-      task.id === editingTask.id 
-        ? { ...editingTask, updatedAt: new Date().toISOString() }
-        : task
-    ));
-    setShowEditModal(false);
-    setEditingTask(null);
-    setShowUpdateConfirmModal(false);
+    try {
+      const updatedTask = { ...editingTask, updatedAt: new Date().toISOString() };
+      await taskService.updateTask(updatedTask);
+      setTasks(prev => prev.map(task => 
+        task.objectId === editingTask.objectId ? updatedTask : task
+      ));
+      setShowEditModal(false);
+      setEditingTask(null);
+      setShowUpdateConfirmModal(false);
+    } catch (error) {
+      console.error('Failed to update task:', error);
+    }
   }, [editingTask]);
 
   const handleViewTask = useCallback((task: Task) => {
@@ -345,12 +254,17 @@ export default function Tasks() {
     setShowDeleteModal(true);
   }, []);
 
-  const handleConfirmDelete = useCallback(() => {
-    if (deletingTask) {
-      setTasks(prev => prev.filter(t => t.id !== deletingTask.id));
-      setSelectedTasks(prev => prev.filter(id => id !== deletingTask.id));
-      setShowDeleteModal(false);
-      setDeletingTask(null);
+  const handleConfirmDelete = useCallback(async () => {
+    if (deletingTask && deletingTask.objectId) {
+      try {
+        await taskService.deleteTask(deletingTask.objectId);
+        setTasks(prev => prev.filter(t => t.objectId !== deletingTask.objectId));
+        setSelectedTasks(prev => prev.filter(id => id !== deletingTask.objectId));
+        setShowDeleteModal(false);
+        setDeletingTask(null);
+      } catch (error) {
+        console.error('Failed to delete task:', error);
+      }
     }
   }, [deletingTask]);
 
@@ -364,17 +278,30 @@ export default function Tasks() {
   }, []);
 
   const handleSelectAll = useCallback(() => {
-    const allTaskIds = filteredAndSortedTasks.map(t => t.id);
+    const allTaskIds = filteredAndSortedTasks.map(t => t.objectId!);
     setSelectedTasks(prev => 
       prev.length === allTaskIds.length ? [] : allTaskIds
     );
   }, [filteredAndSortedTasks]);
 
-  const handleBulkStatusChange = useCallback((newStatus: Task['status']) => {
-    setIsLoading(true);
-    setTimeout(() => {
+  const handleBulkStatusChange = useCallback(async (newStatus: Task['status']) => {
+    setIsBulkLoading(true);
+    try {
+      const tasksToUpdate = tasks.filter(task => selectedTasks.includes(task.objectId!));
+      const updatePromises = tasksToUpdate.map(task => {
+        const updatedTask = {
+          ...task,
+          status: newStatus,
+          progress: newStatus === 'completed' ? 100 : task.progress,
+          completedDate: newStatus === 'completed' ? new Date().toISOString() : undefined,
+          updatedAt: new Date().toISOString()
+        };
+        return taskService.updateTask(updatedTask);
+      });
+      
+      await Promise.all(updatePromises);
       setTasks(prev => prev.map(task => 
-        selectedTasks.includes(task.id)
+        selectedTasks.includes(task.objectId!)
           ? { 
               ...task, 
               status: newStatus,
@@ -386,47 +313,71 @@ export default function Tasks() {
       ));
       setSelectedTasks([]);
       setShowBulkActions(false);
-      setIsLoading(false);
-    }, 500);
-  }, [selectedTasks]);
+    } catch (error) {
+      console.error('Failed to update tasks:', error);
+    } finally {
+      setIsBulkLoading(false);
+    }
+  }, [selectedTasks, tasks]);
 
-  const handleBulkDelete = useCallback(() => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setTasks(prev => prev.filter(t => !selectedTasks.includes(t.id)));
+  const handleBulkDelete = useCallback(async () => {
+    setIsBulkLoading(true);
+    try {
+      await Promise.all(selectedTasks.map(id => taskService.deleteTask(id)));
+      setTasks(prev => prev.filter(t => !selectedTasks.includes(t.objectId!)));
       setSelectedTasks([]);
       setShowBulkActions(false);
-      setIsLoading(false);
-    }, 500);
+    } catch (error) {
+      console.error('Failed to delete tasks:', error);
+    } finally {
+      setIsBulkLoading(false);
+    }
   }, [selectedTasks]);
 
-  const handleBulkAssign = useCallback((assignee: string) => {
-    setIsLoading(true);
-    setTimeout(() => {
+  const handleBulkAssign = useCallback(async (assignee: string) => {
+    setIsBulkLoading(true);
+    try {
+      const tasksToUpdate = tasks.filter(task => selectedTasks.includes(task.objectId!));
+      const updatePromises = tasksToUpdate.map(task => {
+        const updatedTask = { ...task, assignedTo: assignee, updatedAt: new Date().toISOString() };
+        return taskService.updateTask(updatedTask);
+      });
+      
+      await Promise.all(updatePromises);
       setTasks(prev => prev.map(task => 
-        selectedTasks.includes(task.id)
+        selectedTasks.includes(task.objectId!)
           ? { ...task, assignedTo: assignee, updatedAt: new Date().toISOString() }
           : task
       ));
       setSelectedTasks([]);
       setShowBulkActions(false);
-      setIsLoading(false);
-    }, 500);
-  }, [selectedTasks]);
+    } catch (error) {
+      console.error('Failed to reassign tasks:', error);
+    } finally {
+      setIsBulkLoading(false);
+    }
+  }, [selectedTasks, tasks]);
 
-  const handleStatusChange = useCallback((id: string, newStatus: Task['status']) => {
-    setTasks(prev => prev.map(task => 
-      task.id === id 
-        ? { 
-            ...task, 
-            status: newStatus, 
-            progress: newStatus === 'completed' ? 100 : task.progress,
-            completedDate: newStatus === 'completed' ? new Date().toISOString() : undefined,
-            updatedAt: new Date().toISOString()
-          }
-        : task
-    ));
-  }, []);
+  const handleStatusChange = useCallback(async (objectId: string, newStatus: Task['status']) => {
+    try {
+      const task = tasks.find(t => t.objectId === objectId);
+      if (task) {
+        const updatedTask = {
+          ...task,
+          status: newStatus,
+          progress: newStatus === 'completed' ? 100 : task.progress,
+          completedDate: newStatus === 'completed' ? new Date().toISOString() : undefined,
+          updatedAt: new Date().toISOString()
+        };
+        await taskService.updateTask(updatedTask);
+        setTasks(prev => prev.map(t => 
+          t.objectId === objectId ? updatedTask : t
+        ));
+      }
+    } catch (error) {
+      console.error('Failed to update task status:', error);
+    }
+  }, [tasks]);
 
   const clearFilters = useCallback(() => {
     setSearchTerm('');
@@ -475,13 +426,13 @@ export default function Tasks() {
 
   return (
     <>
-      <div className="space-y-3 sm:space-y-4 lg:space-y-6 p-2 sm:p-4 lg:p-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Enhanced Header - Responsive */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               <span className="hidden sm:inline">Task Management System</span>
-              <span className="sm:hidden">Task Manager</span>
+              <span className="sm:hidden">Tasks</span>
             </h1>
             <p className="text-sm sm:text-base text-muted-foreground">
               <span className="hidden sm:inline">Advanced task tracking and project management</span>
@@ -489,13 +440,13 @@ export default function Tasks() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => window.location.reload()} className="h-8 sm:h-9 lg:h-10 text-xs sm:text-sm px-2 sm:px-3">
-              <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            <Button variant="outline" onClick={() => window.location.reload()} className="flex-1 sm:flex-none">
+              <RefreshCw className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Refresh</span>
               <span className="sm:hidden">↻</span>
             </Button>
-            <Button onClick={() => setShowCreateModal(true)} className="h-8 sm:h-9 lg:h-10 text-xs sm:text-sm px-2 sm:px-3">
-              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            <Button onClick={() => setShowCreateModal(true)} className="flex-1 sm:flex-none">
+              <Plus className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Create Task</span>
               <span className="sm:hidden">New</span>
             </Button>
@@ -503,7 +454,7 @@ export default function Tasks() {
         </div>
 
         {/* Advanced Stats Dashboard - Responsive */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 lg:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           {[
             { title: 'Total Tasks', shortTitle: 'Total', value: stats.total, icon: FileText, color: 'text-blue-600', trend: '+12%' },
             { title: 'Completed', shortTitle: 'Done', value: stats.completed, icon: CheckCircle, color: 'text-green-600', trend: '+8%' },
@@ -512,7 +463,7 @@ export default function Tasks() {
             { title: 'Avg Progress', shortTitle: 'Avg %', value: `${stats.avgProgress.toFixed(1)}%`, icon: TrendingUp, color: 'text-purple-600', trend: '+3%' },
             { title: 'High Priority', shortTitle: 'High Pri', value: stats.highPriority, icon: Flag, color: 'text-orange-600', trend: '+1%' }
           ].map((stat, index) => (
-            <Card key={stat.title} className="p-2 sm:p-3 lg:p-4">
+            <Card key={stat.title} className="p-3 sm:p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
@@ -529,7 +480,7 @@ export default function Tasks() {
         </div>
 
         {/* Advanced Filters and View Controls */}
-        <Card className="p-3 sm:p-4 lg:p-6">
+        <Card className="p-4 sm:p-6">
           <div className="space-y-3 sm:space-y-4">
             <div className="flex flex-col lg:flex-row gap-3 lg:gap-4">
               <div className="relative flex-1">
@@ -662,10 +613,14 @@ export default function Tasks() {
         </Card>
 
         {/* Tasks Grid/List View */}
-        {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        ) : viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredAndSortedTasks.map((task) => (
-              <Card key={task.id} className="group relative overflow-hidden border-l-4 border-l-transparent">
+              <Card key={task.objectId} className="group relative overflow-hidden border-l-4 border-l-transparent">
                 <div className="p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
                   {/* Task Header */}
                   <div className="flex items-start justify-between gap-2">
@@ -752,7 +707,7 @@ export default function Tasks() {
                     </div>
 
                     {/* Tags - Responsive */}
-                    {task.tags.length > 0 && (
+                    {task.tags && task.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {task.tags.slice(0, window.innerWidth > 640 ? 3 : 2).map((tag, index) => (
                           <Badge key={index} variant="secondary" className="text-xs px-1.5 py-0.5">
@@ -775,7 +730,7 @@ export default function Tasks() {
                         size="sm" 
                         variant="outline" 
                         className="flex-1 text-xs sm:text-sm h-7 sm:h-8" 
-                        onClick={() => handleStatusChange(task.id, 'completed')}
+                        onClick={() => handleStatusChange(task.objectId!, 'completed')}
                       >
                         <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                         <span className="hidden sm:inline">Complete</span>
@@ -826,7 +781,7 @@ export default function Tasks() {
                   </thead>
                   <tbody>
                     {filteredAndSortedTasks.map((task) => (
-                      <tr key={task.id} className="border-t hover:bg-muted/30 transition-colors">
+                      <tr key={task.objectId} className="border-t hover:bg-muted/30 transition-colors">
                         <td className="p-3 xl:p-4">
                           <div className="max-w-xs">
                             <p className="font-medium text-sm xl:text-base line-clamp-1">{task.title}</p>
@@ -899,7 +854,7 @@ export default function Tasks() {
             {/* Mobile/Tablet Card List View */}
             <div className="lg:hidden space-y-3">
               {filteredAndSortedTasks.map((task) => (
-                <Card key={task.id} className="p-4 hover:shadow-lg transition-all">
+                <Card key={task.objectId} className="p-4 hover:shadow-lg transition-all">
                   <div className="space-y-3">
                     {/* Header */}
                     <div className="flex items-start justify-between gap-3">
@@ -974,7 +929,7 @@ export default function Tasks() {
                     </div>
 
                     {/* Tags */}
-                    {task.tags.length > 0 && (
+                    {task.tags && task.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {task.tags.slice(0, 4).map((tag, index) => (
                           <Badge key={index} variant="secondary" className="text-xs">
@@ -996,7 +951,7 @@ export default function Tasks() {
                           size="sm" 
                           variant="outline" 
                           className="flex-1" 
-                          onClick={() => handleStatusChange(task.id, 'completed')}
+                          onClick={() => handleStatusChange(task.objectId!, 'completed')}
                         >
                           <CheckCircle className="h-4 w-4 mr-2" />
                           Mark Complete
@@ -1275,10 +1230,20 @@ export default function Tasks() {
                   </Button>
                   <Button 
                     onClick={handleCreateTask}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                    disabled={isCreating}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50"
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Task
+                    {isCreating ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create Task
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -1323,7 +1288,7 @@ export default function Tasks() {
                   </div>
 
                   {/* Subtasks */}
-                  {viewingTask.subtasks.length > 0 && (
+                  {viewingTask.subtasks && viewingTask.subtasks.length > 0 && (
                     <div>
                       <h4 className="font-medium mb-3">Subtasks</h4>
                       <div className="space-y-2">
@@ -1340,7 +1305,7 @@ export default function Tasks() {
                   )}
 
                   {/* Comments */}
-                  {viewingTask.comments.length > 0 && (
+                  {viewingTask.comments && viewingTask.comments.length > 0 && (
                     <div>
                       <h4 className="font-medium mb-3">Comments</h4>
                       <div className="space-y-3">
@@ -1404,7 +1369,7 @@ export default function Tasks() {
                   </div>
 
                   {/* Tags */}
-                  {viewingTask.tags.length > 0 && (
+                  {viewingTask.tags && viewingTask.tags.length > 0 && (
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Tags</label>
                       <div className="flex flex-wrap gap-1 mt-2">
@@ -1418,14 +1383,38 @@ export default function Tasks() {
                   )}
 
                   {/* Attachments */}
-                  {viewingTask.attachments.length > 0 && (
+                  {viewingTask.attachmentUrls && viewingTask.attachmentUrls.length > 0 && (
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Attachments</label>
                       <div className="space-y-2 mt-2">
-                        {viewingTask.attachments.map((attachment, index) => (
-                          <div key={index} className="flex items-center gap-2 text-sm">
-                            <Paperclip className="h-4 w-4" />
-                            <span>{attachment}</span>
+                        {viewingTask.attachmentUrls.map((url, index) => (
+                          <div key={index} className="flex items-center justify-between p-2 border border-border rounded">
+                            <div className="flex items-center gap-2 text-sm">
+                              <Paperclip className="h-4 w-4" />
+                              <span>Attachment {index + 1}</span>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => window.open(url, '_blank')}
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                View
+                              </Button>
+                              <Button 
+                                size="sm"
+                                onClick={() => {
+                                  const link = document.createElement('a');
+                                  link.href = url;
+                                  link.download = `task_attachment_${index + 1}`;
+                                  link.click();
+                                }}
+                              >
+                                <Download className="h-3 w-3 mr-1" />
+                                Download
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1657,11 +1646,11 @@ export default function Tasks() {
                       </div>
                       <Input
                         placeholder="Enter tags separated by commas"
-                        value={editingTask.tags.join(', ')}
+                        value={editingTask.tags ? editingTask.tags.join(', ') : ''}
                         onChange={(e) => setEditingTask({...editingTask, tags: e.target.value.split(',').map(tag => tag.trim()).filter(Boolean)})}
                       />
                       <div className="flex flex-wrap gap-1 mt-3">
-                        {editingTask.tags.map((tag, index) => (
+                        {editingTask.tags && editingTask.tags.map((tag, index) => (
                           <Badge key={index} variant="secondary" className="text-xs">
                             {tag}
                           </Badge>
@@ -1808,7 +1797,7 @@ export default function Tasks() {
                           size="sm"
                           onClick={() => handleBulkStatusChange(status as Task['status'])}
                           className={`${color} text-xs`}
-                          disabled={isLoading}
+                          disabled={isBulkLoading}
                         >
                           {label}
                         </Button>
@@ -1821,7 +1810,7 @@ export default function Tasks() {
                     <select 
                       onChange={(e) => e.target.value && handleBulkAssign(e.target.value)}
                       className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      disabled={isLoading}
+                      disabled={isBulkLoading}
                     >
                       <option value="">Select Assignee</option>
                       {ASSIGNEES.map(assignee => (
@@ -1836,7 +1825,7 @@ export default function Tasks() {
                       size="sm"
                       onClick={handleBulkDelete}
                       className="w-full"
-                      disabled={isLoading}
+                      disabled={isBulkLoading}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Delete Selected Tasks
@@ -1849,21 +1838,21 @@ export default function Tasks() {
                     variant="outline" 
                     onClick={() => setShowBulkActions(false)}
                     className="flex-1"
-                    disabled={isLoading}
+                    disabled={isBulkLoading}
                   >
                     Cancel
                   </Button>
                   <Button 
                     onClick={() => setSelectedTasks([])}
                     className="flex-1"
-                    disabled={isLoading}
+                    disabled={isBulkLoading}
                   >
                     Clear Selection
                   </Button>
                 </div>
               </div>
 
-              {isLoading && (
+              {isBulkLoading && (
                 <div className="absolute inset-0 bg-background/80 rounded-lg flex items-center justify-center">
                   <div className="flex items-center gap-2">
                     <RefreshCw className="h-4 w-4 animate-spin" />

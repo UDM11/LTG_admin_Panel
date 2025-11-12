@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { certificateService, Certificate } from '@/services/backendless';
 import { 
   Search, 
   Plus, 
@@ -35,25 +36,7 @@ import {
   Building
 } from 'lucide-react';
 
-interface Certificate {
-  id: string;
-  internName: string;
-  internEmail: string;
-  internPhone: string;
-  courseName: string;
-  courseCategory: string;
-  issueDate: string;
-  expiryDate: string;
-  status: 'issued' | 'pending' | 'revoked' | 'expired';
-  certificateId: string;
-  completionScore: number;
-  grade: 'A+' | 'A' | 'B+' | 'B' | 'C+' | 'C' | 'F';
-  instructor: string;
-  department: string;
-  verificationCode: string;
-  notes?: string;
-  priority: 'high' | 'medium' | 'low';
-}
+
 
 interface CertificateFormData {
   internName: string;
@@ -70,63 +53,7 @@ interface CertificateFormData {
   uploadedFile: File | null;
 }
 
-const mockCertificates: Certificate[] = [
-  {
-    id: '1',
-    internName: 'John Doe',
-    internEmail: 'john.doe@email.com',
-    internPhone: '+1-555-0123',
-    courseName: 'Full Stack Development',
-    courseCategory: 'Web Development',
-    issueDate: '2024-01-15',
-    expiryDate: '2026-01-15',
-    status: 'issued',
-    certificateId: 'LTG-2024-001',
-    completionScore: 95,
-    grade: 'A+',
-    instructor: 'Dr. Sarah Johnson',
-    department: 'Computer Science',
-    verificationCode: 'VER-001-2024',
-    notes: 'Exceptional performance in final project',
-    priority: 'high'
-  },
-  {
-    id: '2',
-    internName: 'Jane Smith',
-    internEmail: 'jane.smith@email.com',
-    internPhone: '+1-555-0124',
-    courseName: 'UI/UX Design',
-    courseCategory: 'Design',
-    issueDate: '2024-01-20',
-    expiryDate: '2026-01-20',
-    status: 'pending',
-    certificateId: 'LTG-2024-002',
-    completionScore: 88,
-    grade: 'A',
-    instructor: 'Prof. Michael Chen',
-    department: 'Design',
-    verificationCode: 'VER-002-2024',
-    priority: 'medium'
-  },
-  {
-    id: '3',
-    internName: 'Mike Johnson',
-    internEmail: 'mike.johnson@email.com',
-    internPhone: '+1-555-0125',
-    courseName: 'Data Science',
-    courseCategory: 'Analytics',
-    issueDate: '2024-01-10',
-    expiryDate: '2026-01-10',
-    status: 'issued',
-    certificateId: 'LTG-2024-003',
-    completionScore: 92,
-    grade: 'A',
-    instructor: 'Dr. Emily Rodriguez',
-    department: 'Data Science',
-    verificationCode: 'VER-003-2024',
-    priority: 'high'
-  }
-];
+
 
 const COURSE_CATEGORIES = ['Web Development', 'Design', 'Analytics', 'Mobile Development', 'DevOps', 'Cybersecurity'];
 const DEPARTMENTS = ['Computer Science', 'Design', 'Data Science', 'Engineering', 'Business'];
@@ -137,7 +64,9 @@ export default function Certificates() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'issued' | 'pending' | 'revoked' | 'expired'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
-  const [certificates, setCertificates] = useState<Certificate[]>(mockCertificates);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -165,6 +94,22 @@ export default function Certificates() {
     description: '',
     uploadedFile: null
   });
+
+  // Load certificates from Backendless
+  useEffect(() => {
+    const loadCertificates = async () => {
+      try {
+        setLoading(true);
+        const data = await certificateService.getAllCertificates();
+        setCertificates(data);
+      } catch (error) {
+        console.error('Failed to load certificates:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadCertificates();
+  }, []);
 
   // Modal management
   useEffect(() => {
@@ -244,28 +189,34 @@ export default function Certificates() {
   }, []);
 
   // Event handlers
-  const handleIssueCertificate = useCallback(() => {
+  const handleIssueCertificate = useCallback(async () => {
     if (!newCertificate.internName || !newCertificate.courseName || newCertificate.completionScore <= 0) return;
 
-    const certificate: Certificate = {
-      id: Date.now().toString(),
-      ...newCertificate,
-      issueDate: new Date().toISOString().split('T')[0],
-      expiryDate: new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      status: 'pending',
-      certificateId: generateCertificateId(),
-      grade: calculateGrade(newCertificate.completionScore),
-      verificationCode: generateVerificationCode(),
+    try {
+      setIsCreating(true);
+      const certificate = {
+        ...newCertificate,
+        issueDate: new Date().toISOString().split('T')[0],
+        expiryDate: new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        status: 'pending' as const,
+        certificateId: generateCertificateId(),
+        grade: calculateGrade(newCertificate.completionScore),
+        verificationCode: generateVerificationCode(),
+      };
 
-    };
-
-    setCertificates(prev => [...prev, certificate]);
-    setNewCertificate({
-      internName: '', internEmail: '', internPhone: '', courseName: '', courseCategory: '',
-      completionScore: 0, instructor: '', department: '', notes: '',
-      priority: 'medium', description: '', uploadedFile: null
-    });
-    setShowIssueModal(false);
+      const savedCertificate = await certificateService.createCertificate(certificate, newCertificate.uploadedFile || undefined);
+      setCertificates(prev => [...prev, savedCertificate]);
+      setNewCertificate({
+        internName: '', internEmail: '', internPhone: '', courseName: '', courseCategory: '',
+        completionScore: 0, instructor: '', department: '', notes: '',
+        priority: 'medium', description: '', uploadedFile: null
+      });
+      setShowIssueModal(false);
+    } catch (error) {
+      console.error('Failed to create certificate:', error);
+    } finally {
+      setIsCreating(false);
+    }
   }, [newCertificate, generateCertificateId, generateVerificationCode, calculateGrade]);
 
   const handleEditCertificate = useCallback((certificate: Certificate) => {
@@ -282,17 +233,21 @@ export default function Certificates() {
     setShowUpdateModal(true);
   }, []);
 
-  const handleConfirmUpdate = useCallback(() => {
+  const handleConfirmUpdate = useCallback(async () => {
     if (!editingCertificate) return;
     
-    setCertificates(prev => prev.map(cert => 
-      cert.id === editingCertificate.id 
-        ? { ...editingCertificate, grade: calculateGrade(editingCertificate.completionScore) }
-        : cert
-    ));
-    setShowUpdateModal(false);
-    setShowEditModal(false);
-    setEditingCertificate(null);
+    try {
+      const updatedCertificate = { ...editingCertificate, grade: calculateGrade(editingCertificate.completionScore) };
+      await certificateService.updateCertificate(updatedCertificate);
+      setCertificates(prev => prev.map(cert => 
+        cert.objectId === editingCertificate.objectId ? updatedCertificate : cert
+      ));
+      setShowUpdateModal(false);
+      setShowEditModal(false);
+      setEditingCertificate(null);
+    } catch (error) {
+      console.error('Failed to update certificate:', error);
+    }
   }, [editingCertificate, calculateGrade]);
 
   const handleUpdateCertificate = useCallback(() => {
@@ -336,32 +291,52 @@ Verification Code: ${certificate.verificationCode}
     setShowRejectModal(true);
   }, []);
 
-  const handleConfirmReject = useCallback(() => {
+  const handleConfirmReject = useCallback(async () => {
     if (rejectingCertificate) {
-      setCertificates(prev => prev.map(cert => 
-        cert.id === rejectingCertificate.id ? { ...cert, status: 'revoked' } : cert
-      ));
-      setShowRejectModal(false);
-      setRejectingCertificate(null);
+      try {
+        const updatedCert = { ...rejectingCertificate, status: 'revoked' as const };
+        await certificateService.updateCertificate(updatedCert);
+        setCertificates(prev => prev.map(cert => 
+          cert.objectId === rejectingCertificate.objectId ? updatedCert : cert
+        ));
+        setShowRejectModal(false);
+        setRejectingCertificate(null);
+      } catch (error) {
+        console.error('Failed to reject certificate:', error);
+      }
     }
   }, [rejectingCertificate]);
 
-  const handleStatusChange = useCallback((id: string, newStatus: Certificate['status']) => {
-    setCertificates(prev => prev.map(cert => 
-      cert.id === id ? { ...cert, status: newStatus } : cert
-    ));
-  }, []);
+  const handleStatusChange = useCallback(async (objectId: string, newStatus: Certificate['status']) => {
+    try {
+      const cert = certificates.find(c => c.objectId === objectId);
+      if (cert) {
+        const updatedCert = { ...cert, status: newStatus };
+        await certificateService.updateCertificate(updatedCert);
+        setCertificates(prev => prev.map(c => 
+          c.objectId === objectId ? updatedCert : c
+        ));
+      }
+    } catch (error) {
+      console.error('Failed to update certificate status:', error);
+    }
+  }, [certificates]);
 
   const handleDeleteClick = useCallback((certificate: Certificate) => {
     setDeletingCertificate(certificate);
     setShowDeleteModal(true);
   }, []);
 
-  const handleConfirmDelete = useCallback(() => {
-    if (deletingCertificate) {
-      setCertificates(prev => prev.filter(cert => cert.id !== deletingCertificate.id));
-      setShowDeleteModal(false);
-      setDeletingCertificate(null);
+  const handleConfirmDelete = useCallback(async () => {
+    if (deletingCertificate && deletingCertificate.objectId) {
+      try {
+        await certificateService.deleteCertificate(deletingCertificate.objectId);
+        setCertificates(prev => prev.filter(cert => cert.objectId !== deletingCertificate.objectId));
+        setShowDeleteModal(false);
+        setDeletingCertificate(null);
+      } catch (error) {
+        console.error('Failed to delete certificate:', error);
+      }
     }
   }, [deletingCertificate]);
 
@@ -549,7 +524,12 @@ Verification Code: ${certificate.verificationCode}
         </Card>
 
         {/* Enhanced Certificates Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredAndSortedCertificates.map((certificate) => (
             <Card key={certificate.id} className="p-4 sm:p-6 hover:shadow-xl transition-all group">
               <div className="space-y-4">
@@ -634,7 +614,7 @@ Verification Code: ${certificate.verificationCode}
                 {certificate.status === 'pending' && (
                   <div className="flex gap-1 pt-2">
                     <Button size="sm" variant="outline" className="flex-1" 
-                      onClick={() => handleStatusChange(certificate.id, 'issued')}>
+                      onClick={() => handleStatusChange(certificate.objectId!, 'issued')}>
                       <CheckCircle className="h-4 w-4 mr-1" />
                       Approve
                     </Button>
@@ -648,7 +628,8 @@ Verification Code: ${certificate.verificationCode}
               </div>
             </Card>
           ))}
-        </div>
+          </div>
+        )}
 
         {/* Enhanced Empty State */}
         {filteredAndSortedCertificates.length === 0 && (
@@ -921,10 +902,20 @@ Verification Code: ${certificate.verificationCode}
                   </Button>
                   <Button 
                     onClick={handleIssueCertificate} 
-                    className="px-6 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
+                    disabled={isCreating}
+                    className="px-6 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 disabled:opacity-50"
                   >
-                    <Award className="w-4 h-4 mr-2" />
-                    Issue Certificate
+                    {isCreating ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Award className="w-4 h-4 mr-2" />
+                        Issue Certificate
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -1252,6 +1243,43 @@ Verification Code: ${certificate.verificationCode}
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Notes</label>
                     <p className="text-lg bg-muted p-3 rounded">{viewingCertificate.notes}</p>
+                  </div>
+                )}
+
+                {/* Certificate Document */}
+                {viewingCertificate.documentUrl && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Certificate Document</label>
+                    <div className="mt-2 p-4 border border-border rounded-lg bg-muted/50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-5 w-5 text-primary" />
+                          <span className="text-sm font-medium">Certificate File</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => window.open(viewingCertificate.documentUrl, '_blank')}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                          <Button 
+                            size="sm"
+                            onClick={() => {
+                              const link = document.createElement('a');
+                              link.href = viewingCertificate.documentUrl!;
+                              link.download = `${viewingCertificate.certificateId}_certificate`;
+                              link.click();
+                            }}
+                          >
+                            <Download className="h-4 w-4 mr-1" />
+                            Download
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

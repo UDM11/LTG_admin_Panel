@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { Navbar } from './Navbar';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -9,20 +10,13 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth < 768) {
-        setSidebarCollapsed(true);
-      }
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+    if (isMobile) {
+      setSidebarCollapsed(true);
+    }
+  }, [isMobile]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -35,21 +29,14 @@ export function Layout({ children }: LayoutProps) {
       
       <main
         className={cn(
-          'pt-20 pb-8 px-6 transition-all duration-300',
-          sidebarCollapsed && !isMobile ? 'ml-16' : 'ml-72',
-          isMobile && 'ml-0'
+          'pt-16 sm:pt-20 pb-4 sm:pb-8 px-3 sm:px-4 md:px-6 transition-all duration-300',
+          isMobile ? 'ml-0' : (sidebarCollapsed ? 'ml-16' : 'ml-72')
         )}
       >
-        {children}
+        <div className="max-w-full overflow-x-auto">
+          {children}
+        </div>
       </main>
-
-      {/* Mobile overlay */}
-      {isMobile && !sidebarCollapsed && (
-        <div
-          className="fixed inset-0 bg-black/50 z-30"
-          onClick={() => setSidebarCollapsed(true)}
-        />
-      )}
     </div>
   );
 }
